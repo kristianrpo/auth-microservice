@@ -1,142 +1,140 @@
-name: CI
+name: Documents Microservice CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [develop]
 
 jobs:
   lint:
-    name: Lint
+    name: Lint with golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.25"
+          cache: true
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: Install dependencies
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Run golangci-lint
+        run: |
+          golangci-lint run --output.checkstyle.path=golangci-lint-report.xml || true
+          golangci-lint run --output.text.path=stdout --output.text.colors=true
+
+      - name: Upload Lint Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          version: latest
-          args: --timeout=5m
+          name: lint-reports
+          path: golangci-lint-report.xml
 
-  test:
-    name: Test
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: authuser
-          POSTGRES_PASSWORD: authpassword
-          POSTGRES_DB: authdb
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.25"
+          cache: true
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
+      - name: Install dependencies
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Run Unit Tests with Coverage
+        run: |
+          # Run tests with verbose output
+          echo "Running unit tests..."
+          go test ./internal/.../tests/... -v 2>&1 | tee test-output.log
+          
+          # Extract test summary
+          grep -E "(^=== RUN|^--- PASS|^--- FAIL|^PASS$|^FAIL$)" test-output.log | tail -40 > test-summary.txt
+          
+          # Generate coverage report
+          echo "Generating coverage report..."
+          go test -coverpkg=./internal/... ./internal/.../tests -coverprofile=coverage.out -covermode=atomic
+          
+          # Generate coverage in multiple formats
+          go tool cover -html=coverage.out -o coverage.html
+          go tool cover -func=coverage.out -o coverage.txt
+          
+          # Display coverage summary
+          echo "Coverage Summary:"
+          go tool cover -func=coverage.out | tail -1
+
+      - name: Upload Test Reports Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          name: test-reports
+          path: |
+            coverage.out
+            coverage.html
+            coverage.txt
+            test-output.log
+            test-summary.txt
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run tests
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_USER: authuser
-          DB_PASSWORD: authpassword
-          DB_NAME: authdb
-          DB_SSL_MODE: disable
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          REDIS_PASSWORD: ""
-          JWT_SECRET: test-secret-key
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.txt
-          flags: unittests
-          name: codecov-umbrella
-
-  build:
-    name: Build
+  docker-build-validate:
+    name: Docker build (validate, no push)
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, unit-tests]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
-          go-version: '1.21'
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: false
+          tags: documents-microservice:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build
-        run: go build -v -o bin/auth-service ./cmd/server
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: auth-service
-          path: bin/auth-service
-
-  sonarcloud:
+  sonar:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    needs: test
+    needs: [docker-build-validate]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Download lint artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version: '1.21'
+          name: lint-reports
+          path: .
 
-      - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-reports
+          path: .
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8 # v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
