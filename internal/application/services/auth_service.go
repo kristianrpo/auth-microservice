@@ -90,7 +90,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 	}
 
 	// Generate token pair
-	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email)
+	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email, user.Role)
 	if err != nil {
 		s.logger.Error("failed to generate token pair", zap.Error(err))
 		return nil, domainerrors.ErrInternal
@@ -150,7 +150,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	}
 
 	// Generate new token pair
-	tokenPair, err := s.jwtService.GenerateTokenPair(claims.UserID, claims.Email)
+	tokenPair, err := s.jwtService.GenerateTokenPair(claims.UserID, claims.Email, claims.Role)
 	if err != nil {
 		s.logger.Error("failed to generate new token pair", zap.Error(err))
 		return nil, domainerrors.ErrInternal

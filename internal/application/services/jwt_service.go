@@ -21,9 +21,10 @@ type JWTService struct {
 
 // CustomClaims extends the standard JWT claims
 type CustomClaims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Type   string `json:"type"`
+	UserID string      `json:"user_id"`
+	Email  string      `json:"email"`
+	Role   domain.Role `json:"role"`
+	Type   string      `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -38,23 +39,23 @@ func NewJWTService(secret string, accessDuration, refreshDuration time.Duration,
 }
 
 // GenerateAccessToken generates a new access token
-func (s *JWTService) GenerateAccessToken(userID, email string) (string, error) {
-	return s.generateToken(userID, email, domain.TokenTypeAccess, s.accessTokenDuration)
+func (s *JWTService) GenerateAccessToken(userID, email string, role domain.Role) (string, error) {
+	return s.generateToken(userID, email, role, domain.TokenTypeAccess, s.accessTokenDuration)
 }
 
 // GenerateRefreshToken generates a new refresh token
-func (s *JWTService) GenerateRefreshToken(userID, email string) (string, error) {
-	return s.generateToken(userID, email, domain.TokenTypeRefresh, s.refreshTokenDuration)
+func (s *JWTService) GenerateRefreshToken(userID, email string, role domain.Role) (string, error) {
+	return s.generateToken(userID, email, role, domain.TokenTypeRefresh, s.refreshTokenDuration)
 }
 
 // GenerateTokenPair generates a token pair (access and refresh)
-func (s *JWTService) GenerateTokenPair(userID, email string) (*domain.TokenPair, error) {
-	accessToken, err := s.GenerateAccessToken(userID, email)
+func (s *JWTService) GenerateTokenPair(userID, email string, role domain.Role) (*domain.TokenPair, error) {
+	accessToken, err := s.GenerateAccessToken(userID, email, role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshToken, err := s.GenerateRefreshToken(userID, email)
+	refreshToken, err := s.GenerateRefreshToken(userID, email, role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
@@ -99,6 +100,7 @@ func (s *JWTService) ValidateToken(tokenString string) (*domain.TokenClaims, err
 	return &domain.TokenClaims{
 		UserID: claims.UserID,
 		Email:  claims.Email,
+		Role:   claims.Role,
 		Type:   claims.Type,
 	}, nil
 }
@@ -150,13 +152,14 @@ func (s *JWTService) GetTokenExpiration(tokenString string) (time.Time, error) {
 }
 
 // generateToken is a helper method to generate tokens
-func (s *JWTService) generateToken(userID, email, tokenType string, duration time.Duration) (string, error) {
+func (s *JWTService) generateToken(userID, email string, role domain.Role, tokenType string, duration time.Duration) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(duration)
 
 	claims := CustomClaims{
 		UserID: userID,
 		Email:  email,
+		Role:   role,
 		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
