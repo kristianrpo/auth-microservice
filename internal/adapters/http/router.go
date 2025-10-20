@@ -11,7 +11,9 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 
-	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/health"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/middleware"
 	"github.com/kristianrpo/auth-microservice/internal/application/services"
@@ -33,7 +35,7 @@ func NewRouter(
 	authHandler := shared.NewAuthHandler(authService, logger)
 	oauth2Handler := shared.NewOAuth2Handler(oauth2Service, logger)
 	adminOAuthHandler := shared.NewAdminOAuthClientsHandler(oauth2Service, logger)
-	healthHandler := handler.NewHealthHandler(db, redisClient, logger, version)
+	healthHandler := health.NewHealthHandler(db, redisClient, logger, version)
 	
 	// Middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
@@ -48,18 +50,18 @@ func NewRouter(
 	api := router.PathPrefix("/api/v1").Subrouter()
 
 	// Public routes - Authentication routes
-	api.HandleFunc("/auth/register", handler.Register(authHandler)).Methods(http.MethodPost)
-	api.HandleFunc("/auth/login", handler.Login(authHandler)).Methods(http.MethodPost)
-	api.HandleFunc("/auth/refresh", handler.Refresh(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/auth/register", auth.Register(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/auth/login", auth.Login(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/auth/refresh", auth.Refresh(authHandler)).Methods(http.MethodPost)
 	
 	// OAuth2 Client Credentials endpoint
-	api.HandleFunc("/auth/token", handler.Token(oauth2Handler)).Methods(http.MethodPost)
+	api.HandleFunc("/auth/token", admin.Token(oauth2Handler)).Methods(http.MethodPost)
 
 	// Protected routes - Authentication required routes
 	protected := api.PathPrefix("/auth").Subrouter()
 	protected.Use(authMiddleware.Authenticate)
-	protected.HandleFunc("/logout", handler.Logout(authHandler)).Methods(http.MethodPost)
-	protected.HandleFunc("/me", handler.GetMe(authHandler)).Methods(http.MethodGet)
+	protected.HandleFunc("/logout", auth.Logout(authHandler)).Methods(http.MethodPost)
+	protected.HandleFunc("/me", auth.GetMe(authHandler)).Methods(http.MethodGet)
 
 	// Health checks
 	api.HandleFunc("/health", healthHandler.Health).Methods(http.MethodGet)
@@ -70,11 +72,11 @@ func NewRouter(
 	api.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
 
 	// Admin routes (require ADMIN role)
-	admin := api.PathPrefix("/admin").Subrouter()
-	admin.Use(authMiddleware.Authenticate)
-	admin.Use(roleMiddleware.RequireAdmin)
-	admin.HandleFunc("/oauth-clients", handler.CreateOAuthClient(adminOAuthHandler)).Methods(http.MethodPost)
-	admin.HandleFunc("/oauth-clients", handler.ListOAuthClients(adminOAuthHandler)).Methods(http.MethodGet)
+	adminRoutes := api.PathPrefix("/admin").Subrouter()
+	adminRoutes.Use(authMiddleware.Authenticate)
+	adminRoutes.Use(roleMiddleware.RequireAdmin)
+	adminRoutes.HandleFunc("/oauth-clients", admin.CreateOAuthClient(adminOAuthHandler)).Methods(http.MethodPost)
+	adminRoutes.HandleFunc("/oauth-clients", admin.ListOAuthClients(adminOAuthHandler)).Methods(http.MethodGet)
 
 	// Swagger documentation route
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(

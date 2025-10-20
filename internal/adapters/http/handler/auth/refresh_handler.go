@@ -1,4 +1,4 @@
-package handler
+package auth
 
 import (
 	"encoding/json"
@@ -12,51 +12,48 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 )
 
-// Register handles new user registration
-// @Summary Register a new user
-// @Description Create a new user account in the system
+// Refresh handles token renewal
+// @Summary Refresh tokens
+// @Description Generate a new token pair using a valid refresh token
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body request.RegisterRequest true "User registration data"
-// @Success 201 {object} response.UserResponse "User created successfully"
+// @Param request body request.RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} response.TokenResponse "Tokens refreshed successfully"
 // @Failure 400 {object} response.ErrorResponse "Invalid request or missing data"
-// @Failure 409 {object} response.ErrorResponse "User already exists"
+// @Failure 401 {object} response.ErrorResponse "Invalid or expired token"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/register [post]
-func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
+// @Router /auth/refresh [post]
+func Refresh(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.RegisterRequest
+	var req request.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Logger.Debug("invalid request body", zap.Error(err))
 		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
 		return
 	}
 
-	// Basic validations
-	if req.Email == "" || req.Password == "" || req.Name == "" {
+	if req.RefreshToken == "" {
 		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
 		return
 	}
 
-	// Register user
-	user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name)
+	// Refresh token
+	tokenPair, err := h.AuthService.RefreshToken(r.Context(), req.RefreshToken)
 	if err != nil {
-		h.Logger.Error("failed to register user", zap.Error(err))
+		h.Logger.Warn("token refresh failed", zap.Error(err))
 		httperrors.RespondWithDomainError(w, err)
 		return
 	}
 
 	// Convert to DTO
-	resp := response.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+	resp := response.TokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		TokenType:    tokenPair.TokenType,
+		ExpiresIn:    tokenPair.ExpiresIn,
 	}
 
-	shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
+	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }
