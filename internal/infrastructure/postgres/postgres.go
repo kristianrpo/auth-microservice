@@ -35,8 +35,8 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	user.UpdatedAt = time.Now()
 
 	query := `
-		INSERT INTO users (id, email, password, name, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, email, password, name, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -44,6 +44,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 		user.Email,
 		user.Password,
 		user.Name,
+		user.Role.String(),
 		user.CreatedAt,
 		user.UpdatedAt,
 	)
@@ -62,17 +63,19 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 //nolint:dupl // Similar to GetByEmail but queries by ID instead of email
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password, name, created_at, updated_at
+		SELECT id, email, password, name, role, created_at, updated_at
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	user := &domain.User{}
+	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Password,
 		&user.Name,
+		&roleStr,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -85,6 +88,8 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	role, _ := domain.ParseRole(roleStr)
+	user.Role = role
 	return user, nil
 }
 
@@ -93,17 +98,19 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 //nolint:dupl // Similar to GetByID but queries by email instead of ID
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password, name, created_at, updated_at
+		SELECT id, email, password, name, role, created_at, updated_at
 		FROM users
 		WHERE email = $1 AND deleted_at IS NULL
 	`
 
 	user := &domain.User{}
+	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Password,
 		&user.Name,
+		&roleStr,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -116,6 +123,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
+	role, _ := domain.ParseRole(roleStr)
+	user.Role = role
 	return user, nil
 }
 
@@ -125,7 +134,7 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 
 	query := `
 		UPDATE users
-		SET email = $2, password = $3, name = $4, updated_at = $5
+		SET email = $2, password = $3, name = $4, role = $5, updated_at = $6
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
@@ -134,6 +143,7 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 		user.Email,
 		user.Password,
 		user.Name,
+		user.Role.String(),
 		user.UpdatedAt,
 	)
 
@@ -225,21 +235,45 @@ func NewDB(connectionString string, logger *zap.Logger) (*sql.DB, error) {
 
 // InitSchema initializes the database schema
 func InitSchema(db *sql.DB) error {
-	schema := `
+	// First, create tables
+	createTables := `
 		CREATE TABLE IF NOT EXISTS users (
 			id VARCHAR(36) PRIMARY KEY,
 			email VARCHAR(255) UNIQUE NOT NULL,
 			password VARCHAR(255) NOT NULL,
 			name VARCHAR(255) NOT NULL,
+			role VARCHAR(50) NOT NULL DEFAULT 'USER',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at TIMESTAMP
 		);
 
-		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE deleted_at IS NULL;
-		CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
+		CREATE TABLE IF NOT EXISTS oauth_clients (
+			id VARCHAR(36) PRIMARY KEY,
+			client_id VARCHAR(255) UNIQUE NOT NULL,
+			client_secret VARCHAR(255) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			description TEXT,
+			scopes TEXT[] NOT NULL DEFAULT '{}',
+			active BOOLEAN NOT NULL DEFAULT true,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);
 	`
 
-	_, err := db.Exec(schema)
+	if _, err := db.Exec(createTables); err != nil {
+		return err
+	}
+
+	// Then, create indexes
+	createIndexes := `
+		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE deleted_at IS NULL;
+		CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
+		CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+		CREATE INDEX IF NOT EXISTS idx_oauth_clients_client_id ON oauth_clients(client_id);
+		CREATE INDEX IF NOT EXISTS idx_oauth_clients_active ON oauth_clients(active);
+	`
+
+	_, err := db.Exec(createIndexes)
 	return err
 }
