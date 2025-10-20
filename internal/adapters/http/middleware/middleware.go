@@ -47,7 +47,10 @@ func (m *AuthMiddleware) Authenticate(next nethttp.Handler) nethttp.Handler {
 		// Verify format: Bearer <token>
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			m.logger.Debug("invalid authorization header format")
+			m.logger.Debug("invalid authorization header format",
+				zap.String("header", authHeader),
+				zap.Int("parts_count", len(parts)),
+				zap.Strings("parts", parts))
 			httperrors.RespondWithError(w, httperrors.ErrInvalidAuthHeader)
 			return
 		}
