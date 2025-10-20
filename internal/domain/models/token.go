@@ -16,6 +16,7 @@ type TokenPair struct {
 type TokenClaims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
+	Role   Role   `json:"role"`
 	Type   string `json:"type"` // "access" o "refresh"
 }
 
