@@ -9,6 +9,8 @@ var (
 	ErrUserAlreadyExists  = errors.New("user already exists")
 	ErrInvalidEmail       = errors.New("invalid email format")
 	ErrWeakPassword       = errors.New("password is too weak")
+	ErrClientNotFound     = errors.New("oauth client not found")
+	ErrInvalidClient      = errors.New("invalid oauth client")
 )
 
 // Token errors
