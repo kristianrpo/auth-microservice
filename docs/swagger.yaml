@@ -1,5 +1,40 @@
 basePath: /api/v1
 definitions:
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest:
+    properties:
+      client_id:
+        type: string
+      client_secret:
+        type: string
+      grant_type:
+        type: string
+    required:
+    - client_id
+    - client_secret
+    - grant_type
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest:
+    properties:
+      client_id:
+        minLength: 3
+        type: string
+      client_secret:
+        minLength: 8
+        type: string
+      description:
+        type: string
+      name:
+        minLength: 3
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+    required:
+    - client_id
+    - client_secret
+    - name
+    type: object
   github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest:
     properties:
       email:
@@ -37,6 +72,15 @@ definitions:
     - name
     - password
     type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      token_type:
+        type: string
+    type: object
   github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse:
     properties:
       code:
@@ -64,6 +108,27 @@ definitions:
       message:
         type: string
     type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse:
+    properties:
+      active:
+        type: boolean
+      client_id:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
   github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse:
     properties:
       access_token:
@@ -85,9 +150,19 @@ definitions:
         type: string
       name:
         type: string
+      role:
+        $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_domain_models.Role'
       updated_at:
         type: string
     type: object
+  github_com_kristianrpo_auth-microservice_internal_domain_models.Role:
+    enum:
+    - USER
+    - ADMIN
+    type: string
+    x-enum-varnames:
+    - RoleUser
+    - RoleAdmin
 host: localhost:8080
 info:
   contact:
@@ -103,6 +178,81 @@ info:
   title: Auth Microservice API
   version: "1.0"
 paths:
+  /admin/oauth-clients:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all OAuth2 clients. Only administrators can list clients.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of OAuth clients
+          schema:
+            items:
+              $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "403":
+          description: Forbidden - Admin role required
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List OAuth2 Clients
+      tags:
+      - Admin - OAuth Clients
+    post:
+      consumes:
+      - application/json
+      description: Creates a new OAuth2 client for service-to-service authentication.
+        Only administrators can create clients.
+      parameters:
+      - description: OAuth Client data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: OAuth client created successfully
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "403":
+          description: Forbidden - Admin role required
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "409":
+          description: Client already exists
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create OAuth2 Client
+      tags:
+      - Admin - OAuth Clients
   /auth/login:
     post:
       consumes:
@@ -269,6 +419,51 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: |-
+        Authenticates a client application and returns an access token for service-to-service communication.
+
+        **Test Credentials (use in Swagger):**
+        ```json
+        {
+        "client_id": "123",
+        "client_secret": "123",
+        "grant_type": "client_credentials"
+        }
+        ```
+      parameters:
+      - description: Client Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access token generated successfully
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse'
+        "400":
+          description: Invalid request or missing parameters
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "401":
+          description: Invalid client credentials
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      summary: OAuth2 Client Credentials
+      tags:
+      - OAuth2
   /health:
     get:
       consumes:
@@ -329,7 +524,7 @@ paths:
       - Health
 securityDefinitions:
   BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
+    description: 'Type "Bearer <token>" in the field. Example: Bearer eyJhbGciOi...'
     in: header
     name: Authorization
     type: apiKey
@@ -337,5 +532,9 @@ swagger: "2.0"
 tags:
 - description: Endpoints related to authentication and authorization
   name: Authentication
+- description: OAuth2 endpoints for service-to-service communication
+  name: OAuth2
+- description: Admin endpoints for managing OAuth2 clients (requires ADMIN role)
+  name: Admin - OAuth Clients
 - description: Endpoints for checking the service status
   name: Health

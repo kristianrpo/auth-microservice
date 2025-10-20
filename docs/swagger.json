@@ -17,6 +17,122 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/admin/oauth-clients": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves all OAuth2 clients. Only administrators can list clients.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - OAuth Clients"
+                ],
+                "summary": "List OAuth2 Clients",
+                "responses": {
+                    "200": {
+                        "description": "List of OAuth clients",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin role required",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new OAuth2 client for service-to-service authentication. Only administrators can create clients.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - OAuth Clients"
+                ],
+                "summary": "Create OAuth2 Client",
+                "parameters": [
+                    {
+                        "description": "OAuth Client data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "OAuth client created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Admin role required",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Client already exists",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns access and refresh tokens",
@@ -275,6 +391,59 @@
                 }
             }
         },
+        "/auth/token": {
+            "post": {
+                "description": "Authenticates a client application and returns an access token for service-to-service communication.\n\n**Test Credentials (use in Swagger):**\n```json\n{\n\"client_id\": \"123\",\n\"client_secret\": \"123\",\n\"grant_type\": \"client_credentials\"\n}\n```",
+                "consumes": [
+                    "application/json",
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OAuth2"
+                ],
+                "summary": "OAuth2 Client Credentials",
+                "parameters": [
+                    {
+                        "description": "Client Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Access token generated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing parameters",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid client credentials",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Check the health status of the service and its dependencies (database, Redis)",
@@ -364,6 +533,56 @@
         }
     },
     "definitions": {
+        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "client_secret",
+                "grant_type"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "client_secret": {
+                    "type": "string"
+                },
+                "grant_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "client_secret",
+                "name"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "minLength": 3
+                },
+                "client_secret": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "minLength": 3
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest": {
             "type": "object",
             "required": [
@@ -419,6 +638,20 @@
                 }
             }
         },
+        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "token_type": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -461,6 +694,38 @@
                 }
             }
         },
+        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse": {
             "type": "object",
             "properties": {
@@ -493,15 +758,29 @@
                 "name": {
                     "type": "string"
                 },
+                "role": {
+                    "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_domain_models.Role"
+                },
                 "updated_at": {
                     "type": "string"
                 }
             }
+        },
+        "github_com_kristianrpo_auth-microservice_internal_domain_models.Role": {
+            "type": "string",
+            "enum": [
+                "USER",
+                "ADMIN"
+            ],
+            "x-enum-varnames": [
+                "RoleUser",
+                "RoleAdmin"
+            ]
         }
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "description": "Type \"Bearer \u003ctoken\u003e\" in the field. Example: Bearer eyJhbGciOi...",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
@@ -511,6 +790,14 @@
         {
             "description": "Endpoints related to authentication and authorization",
             "name": "Authentication"
+        },
+        {
+            "description": "OAuth2 endpoints for service-to-service communication",
+            "name": "OAuth2"
+        },
+        {
+            "description": "Admin endpoints for managing OAuth2 clients (requires ADMIN role)",
+            "name": "Admin - OAuth Clients"
         },
         {
             "description": "Endpoints for checking the service status",
