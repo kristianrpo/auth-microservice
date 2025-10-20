@@ -38,10 +38,16 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Type "Bearer <token>" in the field. Example: Bearer eyJhbGciOi...
 
 // @tag.name Authentication
 // @tag.description Endpoints related to authentication and authorization
+
+// @tag.name OAuth2
+// @tag.description OAuth2 endpoints for service-to-service communication
+
+// @tag.name Admin - OAuth Clients
+// @tag.description Admin endpoints for managing OAuth2 clients (requires ADMIN role)
 
 // @tag.name Health
 // @tag.description Endpoints for checking the service status
@@ -101,6 +107,7 @@ func main() {
 	// Inicializar repositorios
 	userRepo := postgres.NewUserRepository(db, logger)
 	tokenRepo := redis.NewTokenRepository(redisClient, logger)
+	oauthClientRepo := postgres.NewOAuthClientRepository(db, logger)
 
 	// Inicializar servicios
 	jwtService := services.NewJWTService(
@@ -112,8 +119,15 @@ func main() {
 
 	authService := services.NewAuthService(userRepo, tokenRepo, jwtService, logger)
 
+	oauth2Service := services.NewOAuth2Service(
+		oauthClientRepo,
+		cfg.JWT.Secret,
+		cfg.JWT.AccessTokenDuration,
+		logger,
+	)
+
 	// Inicializar router
-	router := httpAdapter.NewRouter(authService, db, redisClient, logger)
+	router := httpAdapter.NewRouter(authService, oauth2Service, db, redisClient, logger)
 
 	// Configurar servidor HTTP
 	server := &http.Server{
