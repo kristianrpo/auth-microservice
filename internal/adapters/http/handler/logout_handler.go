@@ -10,6 +10,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 )
 
 // Logout handles user logout
@@ -25,7 +26,8 @@ import (
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
 // @Router /auth/logout [post]
-func (h *AuthHandler) Logout(w nethttp.ResponseWriter, r *nethttp.Request) {
+func Logout(h *shared.AuthHandler) nethttp.HandlerFunc {
+	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 	// Get access token from header
 	authHeader := r.Header.Get("Authorization")
 	var accessToken string
@@ -46,12 +48,13 @@ func (h *AuthHandler) Logout(w nethttp.ResponseWriter, r *nethttp.Request) {
 	}
 
 	// Perform logout
-	if err := h.authService.Logout(r.Context(), accessToken, req.RefreshToken); err != nil {
-		h.logger.Error("logout failed", zap.Error(err))
+	if err := h.AuthService.Logout(r.Context(), accessToken, req.RefreshToken); err != nil {
+		h.Logger.Error("logout failed", zap.Error(err))
 		httperrors.RespondWithDomainError(w, err)
 		return
 	}
 
 	resp := response.MessageResponse{Message: "logout successful"}
-	respondWithJSON(w, nethttp.StatusOK, resp)
+	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+	}
 }

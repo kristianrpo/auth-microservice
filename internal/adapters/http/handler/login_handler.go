@@ -9,6 +9,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 )
 
 // Login handles user authentication
@@ -23,10 +24,11 @@ import (
 // @Failure 401 {object} response.ErrorResponse "Invalid credentials"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
 // @Router /auth/login [post]
-func (h *AuthHandler) Login(w nethttp.ResponseWriter, r *nethttp.Request) {
+func Login(h *shared.AuthHandler) nethttp.HandlerFunc {
+	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 	var req request.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Debug("invalid request body", zap.Error(err))
+		h.Logger.Debug("invalid request body", zap.Error(err))
 		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
 		return
 	}
@@ -38,9 +40,9 @@ func (h *AuthHandler) Login(w nethttp.ResponseWriter, r *nethttp.Request) {
 	}
 
 	// Authenticate user
-	tokenPair, err := h.authService.Login(r.Context(), req.Email, req.Password)
+	tokenPair, err := h.AuthService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		h.logger.Warn("login failed", zap.Error(err), zap.String("email", req.Email))
+		h.Logger.Warn("login failed", zap.Error(err), zap.String("email", req.Email))
 		httperrors.RespondWithDomainError(w, err)
 		return
 	}
@@ -53,5 +55,6 @@ func (h *AuthHandler) Login(w nethttp.ResponseWriter, r *nethttp.Request) {
 		ExpiresIn:    tokenPair.ExpiresIn,
 	}
 
-	respondWithJSON(w, nethttp.StatusOK, resp)
+	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+	}
 }

@@ -1,4 +1,4 @@
-package handler
+package shared
 
 import (
 	"go.uber.org/zap"
@@ -8,14 +8,14 @@ import (
 
 // AuthHandler manages the requests related to authentication
 type AuthHandler struct {
-	authService *services.AuthService
-	logger      *zap.Logger
+	AuthService *services.AuthService
+	Logger      *zap.Logger
 }
 
 // NewAuthHandler creates a new instance of AuthHandler
 func NewAuthHandler(authService *services.AuthService, logger *zap.Logger) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
-		logger:      logger,
+		AuthService: authService,
+		Logger:      logger,
 	}
 }

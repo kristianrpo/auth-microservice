@@ -6,6 +6,7 @@ import (
 	nethttp "net/http"
 	"time"
 
+	_ "github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response" // Used in Swagger annotations
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 )
 

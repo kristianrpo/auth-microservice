@@ -9,6 +9,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 )
 
 // Register handles new user registration
@@ -23,10 +24,11 @@ import (
 // @Failure 409 {object} response.ErrorResponse "User already exists"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
 // @Router /auth/register [post]
-func (h *AuthHandler) Register(w nethttp.ResponseWriter, r *nethttp.Request) {
+func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
+	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 	var req request.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Debug("invalid request body", zap.Error(err))
+		h.Logger.Debug("invalid request body", zap.Error(err))
 		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
 		return
 	}
@@ -38,9 +40,9 @@ func (h *AuthHandler) Register(w nethttp.ResponseWriter, r *nethttp.Request) {
 	}
 
 	// Register user
-	user, err := h.authService.Register(r.Context(), req.Email, req.Password, req.Name)
+	user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
-		h.logger.Error("failed to register user", zap.Error(err))
+		h.Logger.Error("failed to register user", zap.Error(err))
 		httperrors.RespondWithDomainError(w, err)
 		return
 	}
@@ -50,9 +52,11 @@ func (h *AuthHandler) Register(w nethttp.ResponseWriter, r *nethttp.Request) {
 		ID:        user.ID,
 		Email:     user.Email,
 		Name:      user.Name,
+		Role:      user.Role,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	respondWithJSON(w, nethttp.StatusCreated, resp)
+	shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
+	}
 }
