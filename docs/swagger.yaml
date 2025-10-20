@@ -1,315 +1,341 @@
-openapi: 3.0.3
+basePath: /api/v1
+definitions:
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details:
+        type: string
+      error:
+        type: string
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse:
+    properties:
+      services:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
 info:
-  title: Auth Microservice API
-  description: API de autenticación y autorización para aplicaciones basadas en microservicios
-  version: 1.0.0
   contact:
-    name: Kristian Restrepo
+    email: kristianrpo@example.com
+    name: Kristian Rodriguez
     url: https://github.com/kristianrpo
+  description: |-
+    Authentication and user management service with JWT.
+    This microservice provides endpoints for user registration, login, token refresh, and user management.
   license:
     name: MIT
-
-servers:
-  - url: http://localhost:8080/api/v1
-    description: Desarrollo local
-  - url: https://auth.yourdomain.com/api/v1
-    description: Producción
-
-tags:
-  - name: Authentication
-    description: Operaciones de autenticación
-  - name: Health
-    description: Health checks y métricas
-
+    url: https://opensource.org/licenses/MIT
+  title: Auth Microservice API
+  version: "1.0"
 paths:
-  /auth/register:
-    post:
-      tags:
-        - Authentication
-      summary: Registrar nuevo usuario
-      description: Crea una cuenta de usuario nueva
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Usuario registrado exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
-          description: Solicitud inválida
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: El usuario ya existe
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /auth/login:
     post:
-      tags:
-        - Authentication
-      summary: Iniciar sesión
-      description: Autentica un usuario y devuelve tokens JWT
-      requestBody:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest'
+      produces:
+      - application/json
       responses:
-        '200':
-          description: Login exitoso
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
-          description: Credenciales inválidas
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/refresh:
-    post:
+        "200":
+          description: Login successful, tokens generated
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      summary: User login
       tags:
-        - Authentication
-      summary: Renovar token de acceso
-      description: Genera un nuevo token de acceso usando el refresh token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
-      responses:
-        '200':
-          description: Token renovado exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
-          description: Refresh token inválido o expirado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+      - Authentication
   /auth/logout:
     post:
-      tags:
-        - Authentication
-      summary: Cerrar sesión
-      description: Invalida el token actual
-      security:
-        - BearerAuth: []
+      consumes:
+      - application/json
+      description: Invalidates user tokens (access and refresh)
+      parameters:
+      - description: Refresh token (optional)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest'
+      produces:
+      - application/json
       responses:
-        '200':
-          description: Logout exitoso
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
-        '401':
-          description: No autorizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+        "200":
+          description: Logout successful
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: User logout
+      tags:
+      - Authentication
   /auth/me:
     get:
-      tags:
-        - Authentication
-      summary: Obtener usuario actual
-      description: Retorna la información del usuario autenticado
-      security:
-        - BearerAuth: []
+      consumes:
+      - application/json
+      description: Get the authenticated user's information using the JWT token
+      produces:
+      - application/json
       responses:
-        '200':
-          description: Usuario obtenido exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '401':
-          description: No autorizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+        "200":
+          description: User information
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse'
+        "401":
+          description: Unauthorized or invalid token
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Authentication
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generate a new token pair using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tokens refreshed successfully
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "401":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      summary: Refresh tokens
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account in the system
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "409":
+          description: User already exists
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
   /health:
     get:
-      tags:
-        - Health
-      summary: Health check
-      description: Verifica el estado del servicio
+      consumes:
+      - application/json
+      description: Check the health status of the service and its dependencies (database,
+        Redis)
+      produces:
+      - application/json
       responses:
-        '200':
-          description: Servicio saludable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-
-  /metrics:
+        "200":
+          description: Service is healthy
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse'
+        "503":
+          description: Service is unhealthy
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse'
+      summary: Complete health check
+      tags:
+      - Health
+  /health/live:
     get:
-      tags:
-        - Health
-      summary: Métricas Prometheus
-      description: Retorna métricas en formato Prometheus
+      consumes:
+      - application/json
+      description: Check if the service is alive (used by Kubernetes)
+      produces:
+      - application/json
       responses:
-        '200':
-          description: Métricas
-          content:
-            text/plain:
-              schema:
-                type: string
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    RegisterRequest:
-      type: object
-      required:
-        - email
-        - password
-        - name
-      properties:
-        email:
-          type: string
-          format: email
-          example: usuario@ejemplo.com
-        password:
-          type: string
-          format: password
-          minLength: 8
-          example: Password123!
-        name:
-          type: string
-          example: Usuario Ejemplo
-
-    LoginRequest:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          example: usuario@ejemplo.com
-        password:
-          type: string
-          format: password
-          example: Password123!
-
-    RefreshRequest:
-      type: object
-      required:
-        - refresh_token
-      properties:
-        refresh_token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-    LoginResponse:
-      type: object
-      properties:
-        access_token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        refresh_token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        token_type:
-          type: string
-          example: Bearer
-        expires_in:
-          type: integer
-          description: Segundos hasta la expiración
-          example: 900
-
-    UserResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: 550e8400-e29b-41d4-a716-446655440000
-        email:
-          type: string
-          format: email
-          example: usuario@ejemplo.com
-        name:
-          type: string
-          example: Usuario Ejemplo
-        created_at:
-          type: string
-          format: date-time
-          example: 2024-01-15T10:30:00Z
-        updated_at:
-          type: string
-          format: date-time
-          example: 2024-01-15T10:30:00Z
-
-    MessageResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Operación exitosa
-
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-          example: Error al procesar la solicitud
-        code:
-          type: string
-          example: INVALID_REQUEST
-        details:
-          type: string
-          example: El campo email es requerido
-
-    HealthResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          example: healthy
-        timestamp:
-          type: string
-          format: date-time
-          example: 2024-01-15T10:30:00Z
-        version:
-          type: string
-          example: 1.0.0
-        services:
-          type: object
-          properties:
-            database:
+        "200":
+          description: Service is alive
+          schema:
+            additionalProperties:
               type: string
-              example: healthy
-            redis:
+            type: object
+      summary: Liveness check
+      tags:
+      - Health
+  /health/ready:
+    get:
+      consumes:
+      - application/json
+      description: Check if the service is ready to receive traffic (used by Kubernetes)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is ready
+          schema:
+            additionalProperties:
               type: string
-              example: healthy
-
+            type: object
+        "503":
+          description: Service is not ready
+          schema:
+            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+      summary: Readiness check
+      tags:
+      - Health
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Endpoints related to authentication and authorization
+  name: Authentication
+- description: Endpoints for checking the service status
+  name: Health

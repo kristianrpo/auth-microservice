@@ -1,101 +1,73 @@
+version: "2"
+
 run:
-  timeout: 5m
+  timeout: 3m
   tests: true
-  skip-dirs:
-    - vendor
-    - testdata
-    - docs
-    - infra
 
 linters:
   enable:
-    - errcheck      # Checking for unchecked errors
-    - gosimple      # Linter for Go source code that specializes in simplifying code
-    - govet         # Vet examines Go source code and reports suspicious constructs
-    - ineffassign   # Detects when assignments to existing variables are not used
-    - staticcheck   # It's a go vet on steroids, applying a ton of static analysis checks
-    - typecheck     # Like the front-end of a Go compiler, parses and type-checks Go code
-    - unused        # Checks Go code for unused constants, variables, functions and types
-    - gofmt         # Gofmt checks whether code was gofmt-ed
-    - goimports     # In addition to fixing imports, goimports also formats your code in the same style as gofmt
-    - misspell      # Finds commonly misspelled English words in comments
-    - revive        # Fast, configurable, extensible, flexible, and beautiful linter for Go
-    - gosec         # Inspects source code for security problems
-    - bodyclose     # Checks whether HTTP response body is closed successfully
-    - noctx         # Finds sending http request without context.Context
-    - errname       # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
-    - goconst       # Finds repeated strings that could be replaced by a constant
-    - gocritic      # Provides diagnostics that check for bugs, performance and style issues
-    - gocyclo       # Computes and checks the cyclomatic complexity of functions
-    - goprintffuncname # Checks that printf-like functions are named with f at the end
-    - prealloc      # Finds slice declarations that could potentially be pre-allocated
-    - unconvert     # Remove unnecessary type conversions
-    - unparam       # Reports unused function parameters
-    - whitespace    # Tool for detection of leading and trailing whitespace
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - revive
+    - gocyclo
+    - dupl
+    - misspell
+    - unparam
+    - prealloc
+    - gosec
+    - nolintlint
+  disable:
+    - wsl
+    - funlen
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  
-  govet:
-    enable-all: true
-    disable:
-      - shadow
-  
-  gocyclo:
-    min-complexity: 15
-  
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  
-  misspell:
-    locale: US
-  
-  revive:
+  settings:
+    gocyclo:
+      min-complexity: 15
+    dupl:
+      threshold: 100
+    misspell:
+      locale: US
+    revive:
+      confidence: 0.8
+      severity: warning
+    gosec:
+      excludes: [G304, G107]
+
+  exclusions:
+    paths:
+      - "^vendor/"
+      - "^build/"
+      - "^dist/"
+      - ".*_mock\\.go"
     rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  
-  gosec:
-    excludes:
-      - G404 # Use of weak random number generator (math/rand instead of crypto/rand)
+      - text: "should have comment"
+        linters: [revive]
+        path: ".*"
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofumpt:
+      extra-rules: true
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - gosec
-        - goconst
-        - unparam
+  exclude-dirs:
+    - docs
 
+output:
+  formats:
+    json:
+      path: stderr
+    checkstyle:
+      path: report.xml
+    text:
+      path: stdout
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true

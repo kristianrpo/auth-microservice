@@ -1,48 +1,36 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata
-
-# Set working directory
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Install tools needed for fetching Go modules (some modules require git)
+RUN apk --no-cache add git
 
-# Download dependencies
+# Copy go.mod first to leverage build cache for dependencies
+COPY go.mod ./
 RUN go mod download
 
-# Copy source code
+# Copy the full source (including docs folder)
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
+# Ensure go.sum is generated and all deps are resolved
+RUN go mod tidy
 
-# Final stage
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o server cmd/server/main.go
+
+# Runtime stage
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS calls
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates
 
-# Create non-root user
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
-
-WORKDIR /home/appuser
+WORKDIR /root/
 
 # Copy binary from builder
-COPY --from=builder /app/main .
-
-# Change ownership
-RUN chown -R appuser:appuser /home/appuser
-
-# Switch to non-root user
-USER appuser
+COPY --from=builder /app/server .
 
 # Expose port
 EXPOSE 8080
 
 # Run the application
-CMD ["./main"]
-
+CMD ["./server"]
