@@ -1,0 +1,65 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+docs/
+
+# IDEs
+.idea/
+.vscode/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test files
+*_test.go
+testdata/
+
+# Build artifacts
+bin/
+dist/
+tmp/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github/
+
+# Kubernetes
+k8s/
+
+# Terraform
+infra/
+
+# Monitoring
+prometheus/
+grafana/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SonarQube
+.scannerwork/
+sonar-project.properties
+
+# Go
+*.test
+*.out
+coverage.txt
+coverage.html
+vendor/
+go.work
+
