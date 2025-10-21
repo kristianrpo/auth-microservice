@@ -37,59 +37,59 @@ import (
 // @Router /auth/token [post]
 func Token(h *shared.OAuth2Handler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.ClientCredentialsRequest
+		var req request.ClientCredentialsRequest
 
-	// Check Content-Type to handle both JSON and form-urlencoded
-	contentType := r.Header.Get("Content-Type")
+		// Check Content-Type to handle both JSON and form-urlencoded
+		contentType := r.Header.Get("Content-Type")
 
-	// OAuth2 spec prefers application/x-www-form-urlencoded, so we check for JSON explicitly
-	if strings.Contains(contentType, "application/json") {
-		// Parse JSON
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			h.Logger.Debug("invalid request body (JSON)", zap.Error(err))
-			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+		// OAuth2 spec prefers application/x-www-form-urlencoded, so we check for JSON explicitly
+		if strings.Contains(contentType, "application/json") {
+			// Parse JSON
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				h.Logger.Debug("invalid request body (JSON)", zap.Error(err))
+				httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+				return
+			}
+		} else {
+			// Parse form data (default for OAuth2)
+			if err := r.ParseForm(); err != nil {
+				h.Logger.Debug("failed to parse form", zap.Error(err))
+				httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+				return
+			}
+
+			req.ClientID = r.FormValue("client_id")
+			req.ClientSecret = r.FormValue("client_secret")
+			req.GrantType = r.FormValue("grant_type")
+		}
+
+		// Validate required fields
+		if req.ClientID == "" || req.ClientSecret == "" || req.GrantType == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
 			return
 		}
-	} else {
-		// Parse form data (default for OAuth2)
-		if err := r.ParseForm(); err != nil {
-			h.Logger.Debug("failed to parse form", zap.Error(err))
-			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+
+		// Validate grant_type
+		if req.GrantType != "client_credentials" {
+			httperrors.RespondWithErrorMessage(w, nethttp.StatusBadRequest, "unsupported grant_type, must be 'client_credentials'")
 			return
 		}
 
-		req.ClientID = r.FormValue("client_id")
-		req.ClientSecret = r.FormValue("client_secret")
-		req.GrantType = r.FormValue("grant_type")
-	}
+		// Authenticate client and generate token
+		accessToken, expiresIn, err := h.OAuth2Service.ClientCredentials(r.Context(), req.ClientID, req.ClientSecret)
+		if err != nil {
+			h.Logger.Warn("client credentials authentication failed", zap.Error(err), zap.String("client_id", req.ClientID))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Validate required fields
-	if req.ClientID == "" || req.ClientSecret == "" || req.GrantType == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		// Return token response
+		resp := response.ClientCredentialsResponse{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   expiresIn,
+		}
 
-	// Validate grant_type
-	if req.GrantType != "client_credentials" {
-		httperrors.RespondWithErrorMessage(w, nethttp.StatusBadRequest, "unsupported grant_type, must be 'client_credentials'")
-		return
-	}
-
-	// Authenticate client and generate token
-	accessToken, expiresIn, err := h.OAuth2Service.ClientCredentials(r.Context(), req.ClientID, req.ClientSecret)
-	if err != nil {
-		h.Logger.Warn("client credentials authentication failed", zap.Error(err), zap.String("client_id", req.ClientID))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
-
-	// Return token response
-	resp := response.ClientCredentialsResponse{
-		AccessToken: accessToken,
-		TokenType:   "Bearer",
-		ExpiresIn:   expiresIn,
-	}
-
-	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+		shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }

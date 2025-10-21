@@ -6,16 +6,16 @@ import (
 	"log"
 	"time"
 
-    "github.com/rabbitmq/amqp091-go"
+	"github.com/rabbitmq/amqp091-go"
 
-    ports "github.com/kristianrpo/auth-microservice/internal/application/ports"
+	ports "github.com/kristianrpo/auth-microservice/internal/application/ports"
 )
 
 // RabbitMQConsumer implements the MessageConsumer interface for RabbitMQ
 type RabbitMQConsumer struct {
 	client        *RabbitMQClient
 	channel       *amqp091.Channel
-    subscriptions map[string]ports.MessageHandler // queueName -> handler
+	subscriptions map[string]ports.MessageHandler // queueName -> handler
 }
 
 // NewRabbitMQConsumer creates a new RabbitMQ message consumer
@@ -26,7 +26,7 @@ func NewRabbitMQConsumer(client *RabbitMQClient) (*RabbitMQConsumer, error) {
 	r := &RabbitMQConsumer{
 		client:        client,
 		channel:       channel, // may be nil
-    subscriptions: make(map[string]ports.MessageHandler),
+		subscriptions: make(map[string]ports.MessageHandler),
 	}
 
 	// Start monitor for channel close and initial creation/re-subscription
@@ -39,7 +39,7 @@ func NewRabbitMQConsumer(client *RabbitMQClient) (*RabbitMQConsumer, error) {
 func (r *RabbitMQConsumer) SubscribeToQueue(ctx context.Context, queueName string, handler ports.MessageHandler) error {
 	// Keep subscription for re-subscribe after reconnect
 	if r.subscriptions == nil {
-    r.subscriptions = make(map[string]ports.MessageHandler)
+		r.subscriptions = make(map[string]ports.MessageHandler)
 	}
 	r.subscriptions[queueName] = handler
 	if err := r.setupConsumer(queueName); err != nil {

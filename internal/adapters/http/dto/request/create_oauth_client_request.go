@@ -8,4 +8,3 @@ type CreateOAuthClientRequest struct {
 	Description  string   `json:"description"`
 	Scopes       []string `json:"scopes"`
 }
-

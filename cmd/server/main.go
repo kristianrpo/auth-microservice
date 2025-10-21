@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	httpAdapter "github.com/kristianrpo/auth-microservice/internal/adapters/http"
+	"github.com/kristianrpo/auth-microservice/internal/application/ports"
 	"github.com/kristianrpo/auth-microservice/internal/application/services"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/config"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/postgres"
@@ -53,6 +54,77 @@ import (
 
 // @tag.name Health
 // @tag.description Endpoints for checking the service status
+
+// setupRabbitMQ initializes RabbitMQ client and consumer
+func setupRabbitMQ(
+	cfg *config.Config,
+	userRepo ports.UserRepository,
+	tokenRepo ports.TokenRepository,
+	logger *zap.Logger,
+) (*rabbitmq.RabbitMQClient, context.CancelFunc, error) {
+	// Initialize RabbitMQ client
+	rbClient, err := rabbitmq.NewRabbitMQClient(cfg.RabbitMQ)
+	if err != nil {
+		logger.Warn("RabbitMQ not available at startup; will reconnect in background", zap.Error(err))
+	}
+
+	// Initialize RabbitMQ Consumer
+	rbConsumer, err := rabbitmq.NewRabbitMQConsumer(rbClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create RabbitMQ consumer: %w", err)
+	}
+
+	consumeCtx, consumeCancel := context.WithCancel(context.Background())
+
+	// Subscribe to user.transferred events
+	handler := createUserTransferredHandler(userRepo, tokenRepo, logger)
+	if err := rbConsumer.SubscribeToQueue(consumeCtx, cfg.RabbitMQ.ConsumerQueue, handler); err != nil {
+		consumeCancel()
+		return nil, nil, fmt.Errorf("failed to subscribe to RabbitMQ queue: %w", err)
+	}
+
+	return rbClient, consumeCancel, nil
+}
+
+// createUserTransferredHandler creates the handler for user.transferred events
+func createUserTransferredHandler(
+	userRepo ports.UserRepository,
+	tokenRepo ports.TokenRepository,
+	logger *zap.Logger,
+) ports.MessageHandler {
+	return func(ctx context.Context, message []byte) error {
+		type payload struct {
+			IDCitizen int `json:"idCitizen"`
+		}
+		var p payload
+		if err := json.Unmarshal(message, &p); err != nil {
+			logger.Error("failed to unmarshal user.transferred payload", zap.Error(err))
+			return nil // ACK malformed messages to avoid infinite loop
+		}
+
+		// Find user by id_citizen and delete
+		user, err := userRepo.GetByIDCitizen(ctx, p.IDCitizen)
+		if err != nil {
+			// If user doesn't exist, that's fine - they're already gone
+			logger.Info("user not found or already deleted", zap.Int("idCitizen", p.IDCitizen))
+			return nil // ACK the message
+		}
+
+		// Delete user tokens (best effort, don't fail if error)
+		if err := tokenRepo.DeleteUserTokens(ctx, user.ID); err != nil {
+			logger.Warn("failed deleting user tokens", zap.String("user_id", user.ID), zap.Error(err))
+		}
+
+		// Delete user from database
+		if err := userRepo.Delete(ctx, user.ID); err != nil {
+			logger.Warn("failed to delete user", zap.String("user_id", user.ID), zap.Int("idCitizen", p.IDCitizen), zap.Error(err))
+			return nil // ACK anyway to avoid infinite loop
+		}
+
+		logger.Info("successfully processed user.transferred event", zap.Int("idCitizen", p.IDCitizen), zap.String("user_id", user.ID))
+		return nil
+	}
+}
 
 func main() {
 	// Inicializar logger
@@ -128,53 +200,15 @@ func main() {
 		logger,
 	)
 
-    // Initialize RabbitMQ client and consumer and subscribe to user transfer events
-    rbClient, err := rabbitmq.NewRabbitMQClient(cfg.RabbitMQ)
-    if err != nil {
-        logger.Warn("RabbitMQ not available at startup; will reconnect in background", zap.Error(err))
-    }
-    defer func() { _ = rbClient.Close() }()
-
-    rbConsumer, err := rabbitmq.NewRabbitMQConsumer(rbClient)
-    if err != nil {
-        logger.Fatal("Failed to create RabbitMQ consumer", zap.Error(err))
-    }
-
-    consumeCtx, consumeCancel := context.WithCancel(context.Background())
-    defer consumeCancel()
-
-    if err := rbConsumer.SubscribeToQueue(consumeCtx, cfg.RabbitMQ.ConsumerQueue, func(ctx context.Context, message []byte) error {
-        type payload struct{ IDCitizen int `json:"idCitizen"` }
-        var p payload
-        if err := json.Unmarshal(message, &p); err != nil {
-            logger.Error("failed to unmarshal user.transferred payload", zap.Error(err))
-            return nil // ACK malformed messages to avoid infinite loop
-        }
-        
-        // Find user by id_citizen and delete
-        user, err := userRepo.GetByIDCitizen(ctx, p.IDCitizen)
-        if err != nil {
-            // If user doesn't exist, that's fine - they're already gone
-            logger.Info("user not found or already deleted", zap.Int("idCitizen", p.IDCitizen))
-            return nil // ACK the message
-        }
-        
-        // Delete user tokens (best effort, don't fail if error)
-        if err := tokenRepo.DeleteUserTokens(ctx, user.ID); err != nil {
-            logger.Warn("failed deleting user tokens", zap.String("user_id", user.ID), zap.Error(err))
-        }
-        
-        // Delete user from database
-        if err := userRepo.Delete(ctx, user.ID); err != nil {
-            logger.Warn("failed to delete user", zap.String("user_id", user.ID), zap.Int("idCitizen", p.IDCitizen), zap.Error(err))
-            return nil // ACK anyway to avoid infinite loop
-        }
-        
-        logger.Info("successfully processed user.transferred event", zap.Int("idCitizen", p.IDCitizen), zap.String("user_id", user.ID))
-        return nil
-    }); err != nil {
-        logger.Fatal("Failed to subscribe to RabbitMQ queue", zap.Error(err))
-    }
+	// Initialize RabbitMQ
+	rbClient, consumeCancel, err := setupRabbitMQ(cfg, userRepo, tokenRepo, logger)
+	if err != nil {
+		logger.Fatal("Failed to setup RabbitMQ", zap.Error(err))
+	}
+	defer func() {
+		consumeCancel()
+		_ = rbClient.Close()
+	}()
 
 	// Inicializar router
 	router := httpAdapter.NewRouter(authService, oauth2Service, db, redisClient, logger)

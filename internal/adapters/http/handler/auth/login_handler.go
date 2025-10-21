@@ -26,35 +26,35 @@ import (
 // @Router /auth/login [post]
 func Login(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.Logger.Debug("invalid request body", zap.Error(err))
-		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-		return
-	}
+		var req request.LoginRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.Logger.Debug("invalid request body", zap.Error(err))
+			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+			return
+		}
 
-	// Basic validations
-	if req.Email == "" || req.Password == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		// Basic validations
+		if req.Email == "" || req.Password == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
+			return
+		}
 
-	// Authenticate user
-	tokenPair, err := h.AuthService.Login(r.Context(), req.Email, req.Password)
-	if err != nil {
-		h.Logger.Warn("login failed", zap.Error(err), zap.String("email", req.Email))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Authenticate user
+		tokenPair, err := h.AuthService.Login(r.Context(), req.Email, req.Password)
+		if err != nil {
+			h.Logger.Warn("login failed", zap.Error(err), zap.String("email", req.Email))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Convert to DTO
-	resp := response.TokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
-	}
+		// Convert to DTO
+		resp := response.TokenResponse{
+			AccessToken:  tokenPair.AccessToken,
+			RefreshToken: tokenPair.RefreshToken,
+			TokenType:    tokenPair.TokenType,
+			ExpiresIn:    tokenPair.ExpiresIn,
+		}
 
-	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+		shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }

@@ -25,31 +25,31 @@ import (
 // @Router /auth/me [get]
 func GetMe(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	// Get claims from context
-	claims, ok := middleware.GetUserFromContext(r.Context())
-	if !ok {
-		httperrors.RespondWithError(w, httperrors.ErrUnauthorized)
-		return
-	}
+		// Get claims from context
+		claims, ok := middleware.GetUserFromContext(r.Context())
+		if !ok {
+			httperrors.RespondWithError(w, httperrors.ErrUnauthorized)
+			return
+		}
 
-	// Get complete user
-	user, err := h.AuthService.GetUserByID(r.Context(), claims.UserID)
-	if err != nil {
-		h.Logger.Error("failed to get user", zap.Error(err), zap.String("user_id", claims.UserID))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Get complete user
+		user, err := h.AuthService.GetUserByID(r.Context(), claims.UserID)
+		if err != nil {
+			h.Logger.Error("failed to get user", zap.Error(err), zap.String("user_id", claims.UserID))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Convert to DTO
-	resp := response.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}
+		// Convert to DTO
+		resp := response.UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			Name:      user.Name,
+			Role:      user.Role,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
 
-	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+		shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }

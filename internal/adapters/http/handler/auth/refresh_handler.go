@@ -26,34 +26,34 @@ import (
 // @Router /auth/refresh [post]
 func Refresh(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.Logger.Debug("invalid request body", zap.Error(err))
-		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-		return
-	}
+		var req request.RefreshTokenRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.Logger.Debug("invalid request body", zap.Error(err))
+			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+			return
+		}
 
-	if req.RefreshToken == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		if req.RefreshToken == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
+			return
+		}
 
-	// Refresh token
-	tokenPair, err := h.AuthService.RefreshToken(r.Context(), req.RefreshToken)
-	if err != nil {
-		h.Logger.Warn("token refresh failed", zap.Error(err))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Refresh token
+		tokenPair, err := h.AuthService.RefreshToken(r.Context(), req.RefreshToken)
+		if err != nil {
+			h.Logger.Warn("token refresh failed", zap.Error(err))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Convert to DTO
-	resp := response.TokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
-	}
+		// Convert to DTO
+		resp := response.TokenResponse{
+			AccessToken:  tokenPair.AccessToken,
+			RefreshToken: tokenPair.RefreshToken,
+			TokenType:    tokenPair.TokenType,
+			ExpiresIn:    tokenPair.ExpiresIn,
+		}
 
-	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+		shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }

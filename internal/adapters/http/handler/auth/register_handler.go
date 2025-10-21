@@ -26,39 +26,39 @@ import (
 // @Router /auth/register [post]
 func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.Logger.Debug("invalid request body", zap.Error(err))
-		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-		return
-	}
+		var req request.RegisterRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.Logger.Debug("invalid request body", zap.Error(err))
+			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+			return
+		}
 
-	// Basic validations
-	if req.IDCitizen <= 0 || req.Email == "" || req.Password == "" || req.Name == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		// Basic validations
+		if req.IDCitizen <= 0 || req.Email == "" || req.Password == "" || req.Name == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
+			return
+		}
 
-	// Register user
-	user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name, req.IDCitizen)
-	if err != nil {
-		// Use Warn for expected business errors (like user already exists), Error for unexpected failures
-		h.Logger.Warn("failed to register user", zap.Error(err), zap.String("email", req.Email))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Register user
+		user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name, req.IDCitizen)
+		if err != nil {
+			// Use Warn for expected business errors (like user already exists), Error for unexpected failures
+			h.Logger.Warn("failed to register user", zap.Error(err), zap.String("email", req.Email))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Convert to DTO
-	resp := response.UserResponse{
-		ID:        user.ID,
-		IDCitizen: user.IDCitizen,
-		Email:     user.Email,
-		Name:      user.Name,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-	}
+		// Convert to DTO
+		resp := response.UserResponse{
+			ID:        user.ID,
+			IDCitizen: user.IDCitizen,
+			Email:     user.Email,
+			Name:      user.Name,
+			Role:      user.Role,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
 
-	shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
+		shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
 	}
 }

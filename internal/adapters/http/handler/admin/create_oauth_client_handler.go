@@ -29,47 +29,46 @@ import (
 // @Router /admin/oauth-clients [post]
 func CreateOAuthClient(h *shared.AdminOAuthClientsHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	var req request.CreateOAuthClientRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.Logger.Debug("invalid request body", zap.Error(err))
-		httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-		return
-	}
+		var req request.CreateOAuthClientRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.Logger.Debug("invalid request body", zap.Error(err))
+			httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
+			return
+		}
 
-	// Validate required fields
-	if req.ClientID == "" || req.ClientSecret == "" || req.Name == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		// Validate required fields
+		if req.ClientID == "" || req.ClientSecret == "" || req.Name == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
+			return
+		}
 
-	// Create OAuth client
-	client, err := h.OAuth2Service.CreateClient(
-		r.Context(),
-		req.ClientID,
-		req.ClientSecret,
-		req.Name,
-		req.Description,
-		req.Scopes,
-	)
-	if err != nil {
-		h.Logger.Error("failed to create oauth client", zap.Error(err))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Create OAuth client
+		client, err := h.OAuth2Service.CreateClient(
+			r.Context(),
+			req.ClientID,
+			req.ClientSecret,
+			req.Name,
+			req.Description,
+			req.Scopes,
+		)
+		if err != nil {
+			h.Logger.Error("failed to create oauth client", zap.Error(err))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	// Convert to DTO
-	resp := response.OAuthClientResponse{
-		ID:          client.ID,
-		ClientID:    client.ClientID,
-		Name:        client.Name,
-		Description: client.Description,
-		Scopes:      client.Scopes,
-		Active:      client.Active,
-		CreatedAt:   client.CreatedAt,
-		UpdatedAt:   client.UpdatedAt,
-	}
+		// Convert to DTO
+		resp := response.OAuthClientResponse{
+			ID:          client.ID,
+			ClientID:    client.ClientID,
+			Name:        client.Name,
+			Description: client.Description,
+			Scopes:      client.Scopes,
+			Active:      client.Active,
+			CreatedAt:   client.CreatedAt,
+			UpdatedAt:   client.UpdatedAt,
+		}
 
-	shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
+		shared.RespondWithJSON(w, nethttp.StatusCreated, resp)
 	}
 }
-

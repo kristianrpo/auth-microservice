@@ -34,4 +34,3 @@ func ParseRole(s string) (Role, bool) {
 	}
 	return role, true
 }
-

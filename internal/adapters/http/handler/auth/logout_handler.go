@@ -28,33 +28,33 @@ import (
 // @Router /auth/logout [post]
 func Logout(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
-	// Get access token from header
-	authHeader := r.Header.Get("Authorization")
-	var accessToken string
-	if authHeader != "" {
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 {
-			accessToken = parts[1]
+		// Get access token from header
+		authHeader := r.Header.Get("Authorization")
+		var accessToken string
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 {
+				accessToken = parts[1]
+			}
 		}
-	}
 
-	// Get refresh token from body (optional)
-	var req request.LogoutRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
+		// Get refresh token from body (optional)
+		var req request.LogoutRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
 
-	if accessToken == "" {
-		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-		return
-	}
+		if accessToken == "" {
+			httperrors.RespondWithError(w, httperrors.ErrRequiredField)
+			return
+		}
 
-	// Perform logout
-	if err := h.AuthService.Logout(r.Context(), accessToken, req.RefreshToken); err != nil {
-		h.Logger.Error("logout failed", zap.Error(err))
-		httperrors.RespondWithDomainError(w, err)
-		return
-	}
+		// Perform logout
+		if err := h.AuthService.Logout(r.Context(), accessToken, req.RefreshToken); err != nil {
+			h.Logger.Error("logout failed", zap.Error(err))
+			httperrors.RespondWithDomainError(w, err)
+			return
+		}
 
-	resp := response.MessageResponse{Message: "logout successful"}
-	shared.RespondWithJSON(w, nethttp.StatusOK, resp)
+		resp := response.MessageResponse{Message: "logout successful"}
+		shared.RespondWithJSON(w, nethttp.StatusOK, resp)
 	}
 }

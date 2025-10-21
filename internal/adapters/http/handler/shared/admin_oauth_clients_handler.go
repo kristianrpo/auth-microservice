@@ -19,4 +19,3 @@ func NewAdminOAuthClientsHandler(oauth2Service *services.OAuth2Service, logger *
 		Logger:        logger,
 	}
 }
-

@@ -36,7 +36,7 @@ func NewRouter(
 	oauth2Handler := shared.NewOAuth2Handler(oauth2Service, logger)
 	adminOAuthHandler := shared.NewAdminOAuthClientsHandler(oauth2Service, logger)
 	healthHandler := health.NewHealthHandler(db, redisClient, logger, version)
-	
+
 	// Middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 	roleMiddleware := middleware.NewRoleMiddleware(logger)
@@ -53,7 +53,7 @@ func NewRouter(
 	api.HandleFunc("/auth/register", auth.Register(authHandler)).Methods(http.MethodPost)
 	api.HandleFunc("/auth/login", auth.Login(authHandler)).Methods(http.MethodPost)
 	api.HandleFunc("/auth/refresh", auth.Refresh(authHandler)).Methods(http.MethodPost)
-	
+
 	// OAuth2 Client Credentials endpoint
 	api.HandleFunc("/auth/token", admin.Token(oauth2Handler)).Methods(http.MethodPost)
 
@@ -99,5 +99,3 @@ func NewRouter(
 
 	return router
 }
-
-

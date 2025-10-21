@@ -69,4 +69,3 @@ func (m *RoleMiddleware) RequireAdmin(next nethttp.Handler) nethttp.Handler {
 func (m *RoleMiddleware) RequireUser(next nethttp.Handler) nethttp.Handler {
 	return m.RequireRole(domain.RoleUser, domain.RoleAdmin)(next)
 }
-

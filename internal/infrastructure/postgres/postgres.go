@@ -132,6 +132,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 }
 
 // GetByIDCitizen retrieves a user by their citizen ID
+//
+//nolint:dupl // Similar to GetByID and GetByEmail but queries by id_citizen
 func (r *UserRepository) GetByIDCitizen(ctx context.Context, idCitizen int) (*domain.User, error) {
 	query := `
 		SELECT id, id_citizen, email, password, name, role, created_at, updated_at
