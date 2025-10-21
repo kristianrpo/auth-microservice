@@ -41,7 +41,8 @@ linters:
       - "^vendor/"
       - "^build/"
       - "^dist/"
-      - ".*_mock\\.go"
+      - ".*mocks\\.go"
+      - ".*_test\\.go" 
     rules:
       - text: "should have comment"
         linters: [revive]

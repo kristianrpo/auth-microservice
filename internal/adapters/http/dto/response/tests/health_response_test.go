@@ -190,4 +190,3 @@ func TestHealthResponse_Fields(t *testing.T) {
 		t.Errorf("HealthResponse.Services[cache] = %v, want connected", resp.Services["cache"])
 	}
 }
-

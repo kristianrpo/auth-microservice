@@ -228,4 +228,3 @@ func TestOAuthClientResponse_Fields(t *testing.T) {
 		t.Errorf("OAuthClientResponse.UpdatedAt = %v, want %v", resp.UpdatedAt, testTime)
 	}
 }
-

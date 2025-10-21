@@ -317,4 +317,3 @@ func TestCreateOAuthClientHandler(t *testing.T) {
 		})
 	}
 }
-

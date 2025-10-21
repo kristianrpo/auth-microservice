@@ -16,8 +16,8 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
-	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
+	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
 func TestRegisterHandler(t *testing.T) {
@@ -304,4 +304,3 @@ func TestRegisterHandler(t *testing.T) {
 		})
 	}
 }
-

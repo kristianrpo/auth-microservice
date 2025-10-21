@@ -343,4 +343,3 @@ func TestTokenHandler(t *testing.T) {
 		})
 	}
 }
-

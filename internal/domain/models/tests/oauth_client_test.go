@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
-	
+
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
@@ -162,4 +162,3 @@ func TestOAuthClient_ValidateSecret(t *testing.T) {
 		})
 	}
 }
-

@@ -7,9 +7,9 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/kristianrpo/auth-microservice/internal/application/services"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
-	"github.com/kristianrpo/auth-microservice/internal/application/services"
 )
 
 func TestOAuth2Service_ClientCredentials(t *testing.T) {
@@ -366,4 +366,3 @@ func TestOAuth2Service_DeleteClient(t *testing.T) {
 		})
 	}
 }
-

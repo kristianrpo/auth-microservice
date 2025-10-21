@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/zap"
 
-	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 	"github.com/kristianrpo/auth-microservice/internal/application/services"
+	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
 func TestJWTService_GenerateAccessToken(t *testing.T) {
@@ -108,7 +108,7 @@ func TestJWTService_GenerateTokenPair(t *testing.T) {
 	}
 
 	if tokenPair.ExpiresIn != int64((15 * time.Minute).Seconds()) {
-		t.Errorf("GenerateTokenPair() ExpiresIn = %v, want %v", tokenPair.ExpiresIn, int64((15*time.Minute).Seconds()))
+		t.Errorf("GenerateTokenPair() ExpiresIn = %v, want %v", tokenPair.ExpiresIn, int64((15 * time.Minute).Seconds()))
 	}
 }
 
@@ -327,4 +327,3 @@ func TestJWTService_ExpiredToken(t *testing.T) {
 		t.Errorf("ValidateToken() expected error for expired token but got none")
 	}
 }
-

@@ -111,4 +111,3 @@ func TestMessageResponse_Fields(t *testing.T) {
 		t.Errorf("MessageResponse.Message = %v, want Operation successful", resp.Message)
 	}
 }
-

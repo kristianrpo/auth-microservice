@@ -142,4 +142,3 @@ func TestLoginRequest_Fields(t *testing.T) {
 		t.Errorf("LoginRequest.Password = %v, want password123", req.Password)
 	}
 }
-

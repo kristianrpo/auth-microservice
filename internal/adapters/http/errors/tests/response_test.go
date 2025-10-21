@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
+	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 )
 
 func TestRespondWithError(t *testing.T) {
@@ -278,4 +278,3 @@ func TestRespondWithDomainError(t *testing.T) {
 		})
 	}
 }
-

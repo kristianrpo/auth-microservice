@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
-	
+
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
@@ -200,4 +200,3 @@ func TestUser_ToPublic(t *testing.T) {
 		t.Errorf("ToPublic() UpdatedAt = %v, want %v", publicUser.UpdatedAt, user.UpdatedAt)
 	}
 }
-

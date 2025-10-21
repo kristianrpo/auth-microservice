@@ -167,4 +167,3 @@ func TestClientCredentialsRequest_Fields(t *testing.T) {
 		t.Errorf("ClientCredentialsRequest.GrantType = %v, want client_credentials", req.GrantType)
 	}
 }
-

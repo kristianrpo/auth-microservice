@@ -58,4 +58,3 @@ func (m *MockAuthService) GetUserByID(ctx context.Context, userID string) (*doma
 	}
 	return nil, nil
 }
-

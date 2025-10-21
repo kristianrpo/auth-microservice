@@ -9,13 +9,13 @@ import (
 
 // MockUserRepository is a mock implementation of ports.UserRepository
 type MockUserRepository struct {
-	CreateFunc       func(ctx context.Context, user *domain.User) error
-	GetByIDFunc      func(ctx context.Context, id string) (*domain.User, error)
-	GetByEmailFunc   func(ctx context.Context, email string) (*domain.User, error)
+	CreateFunc         func(ctx context.Context, user *domain.User) error
+	GetByIDFunc        func(ctx context.Context, id string) (*domain.User, error)
+	GetByEmailFunc     func(ctx context.Context, email string) (*domain.User, error)
 	GetByIDCitizenFunc func(ctx context.Context, idCitizen int) (*domain.User, error)
-	UpdateFunc       func(ctx context.Context, user *domain.User) error
-	DeleteFunc       func(ctx context.Context, id string) error
-	ExistsFunc       func(ctx context.Context, email string) (bool, error)
+	UpdateFunc         func(ctx context.Context, user *domain.User) error
+	DeleteFunc         func(ctx context.Context, id string) error
+	ExistsFunc         func(ctx context.Context, email string) (bool, error)
 }
 
 func (m *MockUserRepository) Create(ctx context.Context, user *domain.User) error {
@@ -121,12 +121,12 @@ func (m *MockTokenRepository) DeleteUserTokens(ctx context.Context, userID strin
 
 // MockOAuthClientRepository is a mock implementation of ports.OAuthClientRepository
 type MockOAuthClientRepository struct {
-	CreateFunc       func(ctx context.Context, client *domain.OAuthClient) error
-	GetByIDFunc      func(ctx context.Context, id string) (*domain.OAuthClient, error)
+	CreateFunc        func(ctx context.Context, client *domain.OAuthClient) error
+	GetByIDFunc       func(ctx context.Context, id string) (*domain.OAuthClient, error)
 	GetByClientIDFunc func(ctx context.Context, clientID string) (*domain.OAuthClient, error)
-	UpdateFunc       func(ctx context.Context, client *domain.OAuthClient) error
-	DeleteFunc       func(ctx context.Context, id string) error
-	ListFunc         func(ctx context.Context) ([]*domain.OAuthClient, error)
+	UpdateFunc        func(ctx context.Context, client *domain.OAuthClient) error
+	DeleteFunc        func(ctx context.Context, id string) error
+	ListFunc          func(ctx context.Context) ([]*domain.OAuthClient, error)
 }
 
 func (m *MockOAuthClientRepository) Create(ctx context.Context, client *domain.OAuthClient) error {
@@ -170,4 +170,3 @@ func (m *MockOAuthClientRepository) List(ctx context.Context) ([]*domain.OAuthCl
 	}
 	return nil, nil
 }
-

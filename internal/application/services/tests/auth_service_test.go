@@ -7,23 +7,23 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/kristianrpo/auth-microservice/internal/application/services"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
-	"github.com/kristianrpo/auth-microservice/internal/application/services"
 )
 
 func TestAuthService_Register(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 
 	tests := []struct {
-		name       string
-		email      string
-		password   string
-		userName   string
-		idCitizen  int
-		existsFunc func(ctx context.Context, email string) (bool, error)
-		createFunc func(ctx context.Context, user *domain.User) error
-		wantErr    bool
+		name        string
+		email       string
+		password    string
+		userName    string
+		idCitizen   int
+		existsFunc  func(ctx context.Context, email string) (bool, error)
+		createFunc  func(ctx context.Context, user *domain.User) error
+		wantErr     bool
 		expectedErr error
 	}{
 		{
@@ -130,12 +130,12 @@ func TestAuthService_Login(t *testing.T) {
 	testUser.ID = "user-123"
 
 	tests := []struct {
-		name          string
-		email         string
-		password      string
+		name           string
+		email          string
+		password       string
 		getByEmailFunc func(ctx context.Context, email string) (*domain.User, error)
-		wantErr       bool
-		expectedErr   error
+		wantErr        bool
+		expectedErr    error
 	}{
 		{
 			name:     "successful login",
@@ -219,12 +219,12 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	validRefreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
 
 	tests := []struct {
-		name                    string
-		refreshToken            string
-		isTokenBlacklistedFunc  func(ctx context.Context, token string) (bool, error)
-		getRefreshTokenFunc     func(ctx context.Context, token string) (*domain.RefreshTokenData, error)
-		wantErr                 bool
-		expectedErr             error
+		name                   string
+		refreshToken           string
+		isTokenBlacklistedFunc func(ctx context.Context, token string) (bool, error)
+		getRefreshTokenFunc    func(ctx context.Context, token string) (*domain.RefreshTokenData, error)
+		wantErr                bool
+		expectedErr            error
 	}{
 		{
 			name:         "successful refresh",
@@ -311,10 +311,10 @@ func TestAuthService_Logout(t *testing.T) {
 	validRefreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
 
 	tests := []struct {
-		name          string
-		accessToken   string
-		refreshToken  string
-		wantErr       bool
+		name         string
+		accessToken  string
+		refreshToken string
+		wantErr      bool
 	}{
 		{
 			name:         "successful logout",
@@ -408,5 +408,3 @@ func TestAuthService_GetUserByID(t *testing.T) {
 		})
 	}
 }
-
-

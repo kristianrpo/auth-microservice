@@ -156,4 +156,3 @@ func TestErrorResponse_Fields(t *testing.T) {
 		t.Errorf("ErrorResponse.Details = %v, want Invalid email format", resp.Details)
 	}
 }
-

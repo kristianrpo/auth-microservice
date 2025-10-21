@@ -23,13 +23,13 @@ func TestLogoutHandler(t *testing.T) {
 	logger := zap.NewNop()
 
 	tests := []struct {
-		name            string
-		authHeader      string
-		requestBody     interface{}
-		mockSetup       func(*MockAuthService)
-		wantStatusCode  int
-		wantError       bool
-		checkResponse   func(*testing.T, *httptest.ResponseRecorder)
+		name           string
+		authHeader     string
+		requestBody    interface{}
+		mockSetup      func(*MockAuthService)
+		wantStatusCode int
+		wantError      bool
+		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
 			name:       "successful logout with refresh token",
@@ -243,4 +243,3 @@ func TestLogoutHandler(t *testing.T) {
 		})
 	}
 }
-

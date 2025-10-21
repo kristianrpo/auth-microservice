@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 )
 
 func TestNewHTTPError(t *testing.T) {
@@ -81,9 +81,9 @@ func TestNewHTTPError(t *testing.T) {
 
 func TestHTTPError_Error(t *testing.T) {
 	tests := []struct {
-		name     string
-		httpErr  *httperrors.HTTPError
-		wantMsg  string
+		name    string
+		httpErr *httperrors.HTTPError
+		wantMsg string
 	}{
 		{
 			name: "error method returns message",
@@ -345,4 +345,3 @@ func TestMapDomainError(t *testing.T) {
 		})
 	}
 }
-

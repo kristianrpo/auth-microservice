@@ -161,4 +161,3 @@ func TestTokenResponse_Fields(t *testing.T) {
 		t.Errorf("TokenResponse.ExpiresIn = %v, want 3600", resp.ExpiresIn)
 	}
 }
-

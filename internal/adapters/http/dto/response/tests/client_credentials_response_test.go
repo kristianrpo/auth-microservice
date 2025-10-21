@@ -147,4 +147,3 @@ func TestClientCredentialsResponse_Fields(t *testing.T) {
 		t.Errorf("ClientCredentialsResponse.ExpiresIn = %v, want 3600", resp.ExpiresIn)
 	}
 }
-

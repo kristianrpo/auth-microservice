@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
+	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
 func TestUserResponse_JSON(t *testing.T) {
@@ -199,4 +199,3 @@ func TestUserResponse_Fields(t *testing.T) {
 		t.Errorf("UserResponse.UpdatedAt = %v, want %v", resp.UpdatedAt, testTime)
 	}
 }
-

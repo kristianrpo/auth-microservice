@@ -119,4 +119,3 @@ func TestLogoutRequest_Fields(t *testing.T) {
 		t.Errorf("LogoutRequest.RefreshToken = %v, want eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", req.RefreshToken)
 	}
 }
-

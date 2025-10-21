@@ -212,4 +212,3 @@ func TestCreateOAuthClientRequest_Fields(t *testing.T) {
 		t.Errorf("CreateOAuthClientRequest.Scopes = %v, want %v", req.Scopes, expectedScopes)
 	}
 }
-

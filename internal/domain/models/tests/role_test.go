@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	
+
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
@@ -125,4 +125,3 @@ func TestParseRole(t *testing.T) {
 		})
 	}
 }
-

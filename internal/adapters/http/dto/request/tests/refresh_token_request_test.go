@@ -119,4 +119,3 @@ func TestRefreshTokenRequest_Fields(t *testing.T) {
 		t.Errorf("RefreshTokenRequest.RefreshToken = %v, want eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", req.RefreshToken)
 	}
 }
-

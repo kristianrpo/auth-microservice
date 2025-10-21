@@ -182,4 +182,3 @@ func TestRegisterRequest_Fields(t *testing.T) {
 		t.Errorf("RegisterRequest.Name = %v, want Test User", req.Name)
 	}
 }
-

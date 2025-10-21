@@ -40,4 +40,3 @@ func (m *MockOAuth2Service) ClientCredentials(ctx context.Context, clientID, cli
 	}
 	return "", 0, nil
 }
-
