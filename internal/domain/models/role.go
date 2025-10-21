@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 // Role represents a user role in the system
 type Role string
 
@@ -27,10 +29,10 @@ func (r Role) IsValid() bool {
 }
 
 // ParseRole parses a string into a Role
-func ParseRole(s string) (Role, bool) {
+func ParseRole(s string) (Role, error) {
 	role := Role(s)
 	if !role.IsValid() {
-		return RoleUser, false
+		return "", fmt.Errorf("invalid role: %s", s)
 	}
-	return role, true
+	return role, nil
 }

@@ -67,9 +67,9 @@ jobs:
           # Extract test summary
           grep -E "(^=== RUN|^--- PASS|^--- FAIL|^PASS$|^FAIL$)" test-output.log | tail -40 > test-summary.txt
           
-          # Generate coverage report
+          # Generate coverage report (excluding test directories for accurate coverage)
           echo "Generating coverage report..."
-          go test -coverpkg=./internal/... ./internal/.../tests -coverprofile=coverage.out -covermode=atomic
+          go test ./internal/.../tests -coverpkg=$(go list ./internal/... | grep -v '/tests' | tr '\n' ',' | sed 's/,$$//') -coverprofile=coverage.out -covermode=atomic
           
           # Generate coverage in multiple formats
           go tool cover -html=coverage.out -o coverage.html

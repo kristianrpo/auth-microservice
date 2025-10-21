@@ -1,9 +1,15 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	// ErrValidation is returned when validation fails
+	ErrValidation = errors.New("validation error")
 )
 
 // OAuthClient represents an OAuth2 client application for service-to-service communication
@@ -21,9 +27,23 @@ type OAuthClient struct {
 
 // NewOAuthClient creates a new OAuth client with hashed secret
 func NewOAuthClient(clientID, clientSecret, name, description string, scopes []string) (*OAuthClient, error) {
+	if clientID == "" {
+		return nil, ErrValidation
+	}
+	if clientSecret == "" {
+		return nil, ErrValidation
+	}
+	if name == "" {
+		return nil, ErrValidation
+	}
+
 	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
+	}
+
+	if scopes == nil {
+		scopes = []string{}
 	}
 
 	return &OAuthClient{
