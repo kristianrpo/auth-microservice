@@ -35,12 +35,13 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	user.UpdatedAt = time.Now()
 
 	query := `
-		INSERT INTO users (id, email, password, name, role, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (id, id_citizen, email, password, name, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		user.ID,
+		user.IDCitizen,
 		user.Email,
 		user.Password,
 		user.Name,
@@ -63,7 +64,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 //nolint:dupl // Similar to GetByEmail but queries by ID instead of email
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password, name, role, created_at, updated_at
+		SELECT id, id_citizen, email, password, name, role, created_at, updated_at
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -72,6 +73,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
+		&user.IDCitizen,
 		&user.Email,
 		&user.Password,
 		&user.Name,
@@ -98,7 +100,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, 
 //nolint:dupl // Similar to GetByID but queries by email instead of ID
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password, name, role, created_at, updated_at
+		SELECT id, id_citizen, email, password, name, role, created_at, updated_at
 		FROM users
 		WHERE email = $1 AND deleted_at IS NULL
 	`
@@ -107,6 +109,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	var roleStr string
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
+		&user.IDCitizen,
 		&user.Email,
 		&user.Password,
 		&user.Name,
@@ -128,18 +131,54 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	return user, nil
 }
 
+// GetByIDCitizen retrieves a user by their citizen ID
+func (r *UserRepository) GetByIDCitizen(ctx context.Context, idCitizen int) (*domain.User, error) {
+	query := `
+		SELECT id, id_citizen, email, password, name, role, created_at, updated_at
+		FROM users
+		WHERE id_citizen = $1 AND deleted_at IS NULL
+	`
+
+	user := &domain.User{}
+	var roleStr string
+	err := r.db.QueryRowContext(ctx, query, idCitizen).Scan(
+		&user.ID,
+		&user.IDCitizen,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&roleStr,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, domainerrors.ErrUserNotFound
+	}
+	if err != nil {
+		r.logger.Error("failed to get user by id_citizen", zap.Error(err), zap.Int("id_citizen", idCitizen))
+		return nil, fmt.Errorf("failed to get user by id_citizen: %w", err)
+	}
+
+	role, _ := domain.ParseRole(roleStr)
+	user.Role = role
+
+	return user, nil
+}
+
 // Update updates an existing user
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 	user.UpdatedAt = time.Now()
 
 	query := `
 		UPDATE users
-		SET email = $2, password = $3, name = $4, role = $5, updated_at = $6
+		SET id_citizen = $2, email = $3, password = $4, name = $5, role = $6, updated_at = $7
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
 		user.ID,
+		user.IDCitizen,
 		user.Email,
 		user.Password,
 		user.Name,
@@ -239,6 +278,7 @@ func InitSchema(db *sql.DB) error {
 	createTables := `
 		CREATE TABLE IF NOT EXISTS users (
 			id VARCHAR(36) PRIMARY KEY,
+			id_citizen INTEGER UNIQUE NOT NULL,
 			email VARCHAR(255) UNIQUE NOT NULL,
 			password VARCHAR(255) NOT NULL,
 			name VARCHAR(255) NOT NULL,
@@ -267,6 +307,7 @@ func InitSchema(db *sql.DB) error {
 
 	// Then, create indexes
 	createIndexes := `
+		CREATE INDEX IF NOT EXISTS idx_users_id_citizen ON users(id_citizen);
 		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE deleted_at IS NULL;
 		CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
 		CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);

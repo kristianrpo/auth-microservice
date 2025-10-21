@@ -65,6 +65,12 @@ services:
       REDIS_PASSWORD: redispassword
       REDIS_DB: 0
       
+      # RabbitMQ
+      RABBITMQ_URL: amqp://rabbitmq_user:rabbitmq_password@rabbitmq:5672/
+      RABBITMQ_CONSUMER_QUEUE: auth.user.transferred
+      RABBITMQ_PREFETCH_COUNT: 1
+      RABBITMQ_AUTO_ACK: "false"
+      
       # JWT
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
       JWT_ACCESS_TOKEN_DURATION: 15m
@@ -114,6 +120,26 @@ services:
     networks:
       - auth-network
 
+  # RabbitMQ for event-driven communication
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: auth-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rabbitmq_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_password}
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   auth-network:
     driver: bridge
@@ -123,4 +149,5 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+  rabbitmq_data:
 

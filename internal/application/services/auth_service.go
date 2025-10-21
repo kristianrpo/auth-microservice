@@ -36,8 +36,8 @@ func NewAuthService(
 }
 
 // Register registers a new user
-func (s *AuthService) Register(ctx context.Context, email, password, name string) (*domain.UserPublic, error) {
-	s.logger.Info("attempting to register user", zap.String("email", email))
+func (s *AuthService) Register(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error) {
+	s.logger.Info("attempting to register user", zap.String("email", email), zap.Int("id_citizen", idCitizen))
 
 	// Verificar si el usuario ya existe
 	exists, err := s.userRepo.Exists(ctx, email)
@@ -52,7 +52,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 	}
 
 	// Create new user
-	user, err := domain.NewUser(email, password, name)
+	user, err := domain.NewUser(email, password, name, idCitizen)
 	if err != nil {
 		s.logger.Error("failed to create user entity", zap.Error(err))
 		return nil, err
@@ -64,7 +64,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 		return nil, domainerrors.ErrInternal
 	}
 
-	s.logger.Info("user registered successfully", zap.String("user_id", user.ID), zap.String("email", email))
+	s.logger.Info("user registered successfully", zap.String("user_id", user.ID), zap.String("email", email), zap.Int("id_citizen", idCitizen))
 	return user.ToPublic(), nil
 }
 

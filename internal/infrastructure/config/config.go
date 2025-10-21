@@ -15,6 +15,7 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	JWT      JWTConfig
+    RabbitMQ RabbitMQConfig
 	App      AppConfig
 }
 
@@ -47,6 +48,19 @@ type JWTConfig struct {
 	Secret               string
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
+}
+
+// RabbitMQConfig holds RabbitMQ configuration
+type RabbitMQConfig struct {
+    URL string
+
+    // Consumer queue configuration
+    ConsumerQueue string
+
+    // Queue settings
+    Durable       bool
+    PrefetchCount int
+    AutoAck       bool
 }
 
 // AppConfig contains the general application configuration
@@ -84,6 +98,13 @@ func Load() (*Config, error) {
 			AccessTokenDuration:  getEnvAsDuration("JWT_ACCESS_TOKEN_DURATION", 15*time.Minute),
 			RefreshTokenDuration: getEnvAsDuration("JWT_REFRESH_TOKEN_DURATION", 7*24*time.Hour),
 		},
+    RabbitMQ: RabbitMQConfig{
+        URL:                        getEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
+        ConsumerQueue:              getEnv("RABBITMQ_CONSUMER_QUEUE", "auth_user_transferred"),
+        Durable:                    true,
+        PrefetchCount:              getEnvAsInt("RABBITMQ_PREFETCH_COUNT", 1),
+        AutoAck:                    getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
+    },
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),
 			LogLevel:    getEnv("LOG_LEVEL", "info"),

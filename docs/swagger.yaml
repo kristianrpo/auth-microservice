@@ -1,6 +1,14 @@
 basePath: /api/v1
 definitions:
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest:
+  domain.Role:
+    enum:
+    - USER
+    - ADMIN
+    type: string
+    x-enum-varnames:
+    - RoleUser
+    - RoleAdmin
+  request.ClientCredentialsRequest:
     properties:
       client_id:
         type: string
@@ -13,7 +21,7 @@ definitions:
     - client_secret
     - grant_type
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest:
+  request.CreateOAuthClientRequest:
     properties:
       client_id:
         minLength: 3
@@ -35,7 +43,7 @@ definitions:
     - client_secret
     - name
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest:
+  request.LoginRequest:
     properties:
       email:
         type: string
@@ -45,22 +53,24 @@ definitions:
     - email
     - password
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest:
+  request.LogoutRequest:
     properties:
       refresh_token:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest:
+  request.RefreshTokenRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest:
+  request.RegisterRequest:
     properties:
       email:
         type: string
+      id_citizen:
+        type: integer
       name:
         minLength: 2
         type: string
@@ -69,10 +79,11 @@ definitions:
         type: string
     required:
     - email
+    - id_citizen
     - name
     - password
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse:
+  response.ClientCredentialsResponse:
     properties:
       access_token:
         type: string
@@ -81,7 +92,7 @@ definitions:
       token_type:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse:
+  response.ErrorResponse:
     properties:
       code:
         type: string
@@ -90,7 +101,7 @@ definitions:
       error:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse:
+  response.HealthResponse:
     properties:
       services:
         additionalProperties:
@@ -103,12 +114,12 @@ definitions:
       version:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse:
+  response.MessageResponse:
     properties:
       message:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse:
+  response.OAuthClientResponse:
     properties:
       active:
         type: boolean
@@ -129,7 +140,7 @@ definitions:
       updated_at:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse:
+  response.TokenResponse:
     properties:
       access_token:
         type: string
@@ -140,7 +151,7 @@ definitions:
       token_type:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse:
+  response.UserResponse:
     properties:
       created_at:
         type: string
@@ -148,21 +159,15 @@ definitions:
         type: string
       id:
         type: string
+      id_citizen:
+        type: integer
       name:
         type: string
       role:
-        $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_domain_models.Role'
+        $ref: '#/definitions/domain.Role'
       updated_at:
         type: string
     type: object
-  github_com_kristianrpo_auth-microservice_internal_domain_models.Role:
-    enum:
-    - USER
-    - ADMIN
-    type: string
-    x-enum-varnames:
-    - RoleUser
-    - RoleAdmin
 host: localhost:8080
 info:
   contact:
@@ -190,20 +195,20 @@ paths:
           description: List of OAuth clients
           schema:
             items:
-              $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse'
+              $ref: '#/definitions/response.OAuthClientResponse'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "403":
           description: Forbidden - Admin role required
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List OAuth2 Clients
@@ -220,34 +225,34 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest'
+          $ref: '#/definitions/request.CreateOAuthClientRequest'
       produces:
       - application/json
       responses:
         "201":
           description: OAuth client created successfully
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse'
+            $ref: '#/definitions/response.OAuthClientResponse'
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "403":
           description: Forbidden - Admin role required
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "409":
           description: Client already exists
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create OAuth2 Client
@@ -264,26 +269,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest'
+          $ref: '#/definitions/request.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Login successful, tokens generated
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse'
+            $ref: '#/definitions/response.TokenResponse'
         "400":
           description: Invalid request or missing data
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "401":
           description: Invalid credentials
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: User login
       tags:
       - Authentication
@@ -297,26 +302,26 @@ paths:
         in: body
         name: request
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest'
+          $ref: '#/definitions/request.LogoutRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Logout successful
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse'
+            $ref: '#/definitions/response.MessageResponse'
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: User logout
@@ -333,19 +338,19 @@ paths:
         "200":
           description: User information
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse'
+            $ref: '#/definitions/response.UserResponse'
         "401":
           description: Unauthorized or invalid token
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get current user
@@ -362,26 +367,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest'
+          $ref: '#/definitions/request.RefreshTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Tokens refreshed successfully
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse'
+            $ref: '#/definitions/response.TokenResponse'
         "400":
           description: Invalid request or missing data
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "401":
           description: Invalid or expired token
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Refresh tokens
       tags:
       - Authentication
@@ -396,26 +401,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest'
+          $ref: '#/definitions/request.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: User created successfully
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse'
+            $ref: '#/definitions/response.UserResponse'
         "400":
           description: Invalid request or missing data
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "409":
           description: User already exists
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Register a new user
       tags:
       - Authentication
@@ -441,26 +446,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest'
+          $ref: '#/definitions/request.ClientCredentialsRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Access token generated successfully
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse'
+            $ref: '#/definitions/response.ClientCredentialsResponse'
         "400":
           description: Invalid request or missing parameters
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "401":
           description: Invalid client credentials
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: OAuth2 Client Credentials
       tags:
       - OAuth2
@@ -476,11 +481,11 @@ paths:
         "200":
           description: Service is healthy
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse'
+            $ref: '#/definitions/response.HealthResponse'
         "503":
           description: Service is unhealthy
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse'
+            $ref: '#/definitions/response.HealthResponse'
       summary: Complete health check
       tags:
       - Health
@@ -518,7 +523,7 @@ paths:
         "503":
           description: Service is not ready
           schema:
-            $ref: '#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Readiness check
       tags:
       - Health

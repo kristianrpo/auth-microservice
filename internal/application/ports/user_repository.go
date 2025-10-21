@@ -17,6 +17,9 @@ type UserRepository interface {
 	// GetByEmail retrieves a user by their email
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 
+	// GetByIDCitizen retrieves a user by their citizen ID
+	GetByIDCitizen(ctx context.Context, idCitizen int) (*domain.User, error)
+
 	// Update updates an existing user
 	Update(ctx context.Context, user *domain.User) error
 

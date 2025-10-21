@@ -47,26 +47,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse"
+                                "$ref": "#/definitions/response.OAuthClientResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - Admin role required",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -95,7 +95,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest"
+                            "$ref": "#/definitions/request.CreateOAuthClientRequest"
                         }
                     }
                 ],
@@ -103,37 +103,37 @@ const docTemplate = `{
                     "201": {
                         "description": "OAuth client created successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse"
+                            "$ref": "#/definitions/response.OAuthClientResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - Admin role required",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Client already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -159,7 +159,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest"
+                            "$ref": "#/definitions/request.LoginRequest"
                         }
                     }
                 ],
@@ -167,25 +167,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Login successful, tokens generated",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse"
+                            "$ref": "#/definitions/response.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request or missing data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid credentials",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -215,7 +215,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest"
+                            "$ref": "#/definitions/request.LogoutRequest"
                         }
                     }
                 ],
@@ -223,25 +223,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Logout successful",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse"
+                            "$ref": "#/definitions/response.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -269,25 +269,25 @@ const docTemplate = `{
                     "200": {
                         "description": "User information",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse"
+                            "$ref": "#/definitions/response.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -313,7 +313,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest"
+                            "$ref": "#/definitions/request.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -321,25 +321,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Tokens refreshed successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse"
+                            "$ref": "#/definitions/response.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request or missing data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid or expired token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -365,7 +365,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest"
+                            "$ref": "#/definitions/request.RegisterRequest"
                         }
                     }
                 ],
@@ -373,25 +373,25 @@ const docTemplate = `{
                     "201": {
                         "description": "User created successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse"
+                            "$ref": "#/definitions/response.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request or missing data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "User already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -418,7 +418,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest"
+                            "$ref": "#/definitions/request.ClientCredentialsRequest"
                         }
                     }
                 ],
@@ -426,25 +426,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Access token generated successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse"
+                            "$ref": "#/definitions/response.ClientCredentialsResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid request or missing parameters",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid client credentials",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -467,13 +467,13 @@ const docTemplate = `{
                     "200": {
                         "description": "Service is healthy",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse"
+                            "$ref": "#/definitions/response.HealthResponse"
                         }
                     },
                     "503": {
                         "description": "Service is unhealthy",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse"
+                            "$ref": "#/definitions/response.HealthResponse"
                         }
                     }
                 }
@@ -531,7 +531,7 @@ const docTemplate = `{
                     "503": {
                         "description": "Service is not ready",
                         "schema": {
-                            "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -539,7 +539,18 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.ClientCredentialsRequest": {
+        "domain.Role": {
+            "type": "string",
+            "enum": [
+                "USER",
+                "ADMIN"
+            ],
+            "x-enum-varnames": [
+                "RoleUser",
+                "RoleAdmin"
+            ]
+        },
+        "request.ClientCredentialsRequest": {
             "type": "object",
             "required": [
                 "client_id",
@@ -558,7 +569,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.CreateOAuthClientRequest": {
+        "request.CreateOAuthClientRequest": {
             "type": "object",
             "required": [
                 "client_id",
@@ -589,7 +600,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LoginRequest": {
+        "request.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -604,7 +615,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.LogoutRequest": {
+        "request.LogoutRequest": {
             "type": "object",
             "properties": {
                 "refresh_token": {
@@ -612,7 +623,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RefreshTokenRequest": {
+        "request.RefreshTokenRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -623,16 +634,20 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_request.RegisterRequest": {
+        "request.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
+                "id_citizen",
                 "name",
                 "password"
             ],
             "properties": {
                 "email": {
                     "type": "string"
+                },
+                "id_citizen": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string",
@@ -644,7 +659,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ClientCredentialsResponse": {
+        "response.ClientCredentialsResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -658,7 +673,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.ErrorResponse": {
+        "response.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -672,7 +687,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.HealthResponse": {
+        "response.HealthResponse": {
             "type": "object",
             "properties": {
                 "services": {
@@ -692,7 +707,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.MessageResponse": {
+        "response.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -700,7 +715,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.OAuthClientResponse": {
+        "response.OAuthClientResponse": {
             "type": "object",
             "properties": {
                 "active": {
@@ -732,7 +747,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.TokenResponse": {
+        "response.TokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -749,7 +764,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_kristianrpo_auth-microservice_internal_adapters_http_dto_response.UserResponse": {
+        "response.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -761,27 +776,19 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "id_citizen": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
                 "role": {
-                    "$ref": "#/definitions/github_com_kristianrpo_auth-microservice_internal_domain_models.Role"
+                    "$ref": "#/definitions/domain.Role"
                 },
                 "updated_at": {
                     "type": "string"
                 }
             }
-        },
-        "github_com_kristianrpo_auth-microservice_internal_domain_models.Role": {
-            "type": "string",
-            "enum": [
-                "USER",
-                "ADMIN"
-            ],
-            "x-enum-varnames": [
-                "RoleUser",
-                "RoleAdmin"
-            ]
         }
     },
     "securityDefinitions": {

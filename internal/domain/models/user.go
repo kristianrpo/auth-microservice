@@ -10,6 +10,7 @@ import (
 // User represents a user in the system
 type User struct {
 	ID        string    `json:"id"`
+	IDCitizen int       `json:"id_citizen"` // Global citizen ID (like national ID)
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
 	Name      string    `json:"name"`
@@ -19,7 +20,7 @@ type User struct {
 }
 
 // NewUser creates a new instance of User with validations
-func NewUser(email, password, name string) (*User, error) {
+func NewUser(email, password, name string, idCitizen int) (*User, error) {
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
@@ -32,6 +33,9 @@ func NewUser(email, password, name string) (*User, error) {
 	if name == "" {
 		return nil, errors.New("name is required")
 	}
+	if idCitizen <= 0 {
+		return nil, errors.New("id_citizen is required and must be positive")
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -40,6 +44,7 @@ func NewUser(email, password, name string) (*User, error) {
 
 	now := time.Now()
 	return &User{
+		IDCitizen: idCitizen,
 		Email:     email,
 		Password:  string(hashedPassword),
 		Name:      name,
@@ -57,6 +62,7 @@ func (u *User) ComparePassword(password string) error {
 // UserPublic represents the public user data (without password)
 type UserPublic struct {
 	ID        string    `json:"id"`
+	IDCitizen int       `json:"id_citizen"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
 	Role      Role      `json:"role"`
@@ -68,6 +74,7 @@ type UserPublic struct {
 func (u *User) ToPublic() *UserPublic {
 	return &UserPublic{
 		ID:        u.ID,
+		IDCitizen: u.IDCitizen,
 		Email:     u.Email,
 		Name:      u.Name,
 		Role:      u.Role,

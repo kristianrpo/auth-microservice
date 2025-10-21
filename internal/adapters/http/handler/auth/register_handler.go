@@ -34,15 +34,16 @@ func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
 	}
 
 	// Basic validations
-	if req.Email == "" || req.Password == "" || req.Name == "" {
+	if req.IDCitizen <= 0 || req.Email == "" || req.Password == "" || req.Name == "" {
 		httperrors.RespondWithError(w, httperrors.ErrRequiredField)
 		return
 	}
 
 	// Register user
-	user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name)
+	user, err := h.AuthService.Register(r.Context(), req.Email, req.Password, req.Name, req.IDCitizen)
 	if err != nil {
-		h.Logger.Error("failed to register user", zap.Error(err))
+		// Use Warn for expected business errors (like user already exists), Error for unexpected failures
+		h.Logger.Warn("failed to register user", zap.Error(err), zap.String("email", req.Email))
 		httperrors.RespondWithDomainError(w, err)
 		return
 	}
@@ -50,6 +51,7 @@ func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
 	// Convert to DTO
 	resp := response.UserResponse{
 		ID:        user.ID,
+		IDCitizen: user.IDCitizen,
 		Email:     user.Email,
 		Name:      user.Name,
 		Role:      user.Role,
