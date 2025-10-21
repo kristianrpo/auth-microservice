@@ -13,7 +13,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	authhandler "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
@@ -208,41 +208,10 @@ func TestRefreshHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics auth.Refresh but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				var refReq request.RefreshTokenRequest
-				if err := json.NewDecoder(r.Body).Decode(&refReq); err != nil {
-					logger.Debug("invalid request body")
-					httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-					return
-				}
-
-				if refReq.RefreshToken == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Refresh token
-				tokenPair, err := mockAuthService.RefreshToken(r.Context(), refReq.RefreshToken)
-				if err != nil {
-					logger.Warn("token refresh failed")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				// Convert to DTO
-				resp := response.TokenResponse{
-					AccessToken:  tokenPair.AccessToken,
-					RefreshToken: tokenPair.RefreshToken,
-					TokenType:    tokenPair.TokenType,
-					ExpiresIn:    tokenPair.ExpiresIn,
-				}
-
-				shared.RespondWithJSON(w, http.StatusOK, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			// Use real handler with mock service injected
+			h := shared.NewAuthHandler(mockAuthService, logger)
+			handler := authhandler.Refresh(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

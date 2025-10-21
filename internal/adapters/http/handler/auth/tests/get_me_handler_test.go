@@ -12,11 +12,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	authhandler "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/middleware"
-	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
+	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
 func TestGetMeHandler(t *testing.T) {
@@ -190,41 +190,17 @@ func TestGetMeHandler(t *testing.T) {
 			tt.mockSetup(mockAuthService)
 
 			req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
-			
+
 			// Setup context with user claims
 			ctx := tt.setupContext(req.Context())
 			req = req.WithContext(ctx)
 
 			w := httptest.NewRecorder()
 
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				claims, ok := middleware.GetUserFromContext(r.Context())
-				if !ok {
-					httperrors.RespondWithError(w, httperrors.ErrUnauthorized)
-					return
-				}
-
-				user, err := mockAuthService.GetUserByID(r.Context(), claims.UserID)
-				if err != nil {
-					logger.Error("failed to get user")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				resp := response.UserResponse{
-					ID:        user.ID,
-					IDCitizen: user.IDCitizen,
-					Email:     user.Email,
-					Name:      user.Name,
-					Role:      user.Role,
-					CreatedAt: user.CreatedAt,
-					UpdatedAt: user.UpdatedAt,
-				}
-
-				shared.RespondWithJSON(w, http.StatusOK, resp)
-			}
-
-			handlerFunc(w, req)
+			// Use real handler with mock service injected
+			h := shared.NewAuthHandler(mockAuthService, logger)
+			handler := authhandler.GetMe(h)
+			handler(w, req)
 
 			if w.Code != tt.wantStatusCode {
 				t.Errorf("status code = %v, want %v", w.Code, tt.wantStatusCode)
@@ -236,4 +212,3 @@ func TestGetMeHandler(t *testing.T) {
 		})
 	}
 }
-

@@ -40,3 +40,16 @@ func (m *MockOAuth2Service) ClientCredentials(ctx context.Context, clientID, cli
 	}
 	return "", 0, nil
 }
+
+// Additional stub methods to satisfy the OAuth2ServiceInterface used by handlers
+func (m *MockOAuth2Service) ValidateAccessToken(ctx context.Context, tokenString string) (*domain.OAuthTokenClaims, error) {
+	return &domain.OAuthTokenClaims{ClientID: "client-123", Scopes: []string{"read"}, TokenID: "jti", IssuedAt: 0, ExpireAt: 0, Type: "client_credentials"}, nil
+}
+
+func (m *MockOAuth2Service) GetClient(ctx context.Context, id string) (*domain.OAuthClient, error) {
+	return &domain.OAuthClient{ID: id, ClientID: "client-123", Name: "Test", Active: true}, nil
+}
+
+func (m *MockOAuth2Service) DeleteClient(ctx context.Context, id string) error {
+	return nil
+}

@@ -15,7 +15,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	admin "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 )
@@ -271,65 +271,9 @@ func TestTokenHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics admin.Token but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				var tokenReq request.ClientCredentialsRequest
-
-				// Check Content-Type to handle both JSON and form-urlencoded
-				contentType := r.Header.Get("Content-Type")
-
-				if strings.Contains(contentType, "application/json") {
-					// Parse JSON
-					if err := json.NewDecoder(r.Body).Decode(&tokenReq); err != nil {
-						logger.Debug("invalid request body (JSON)")
-						httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-						return
-					}
-				} else {
-					// Parse form data (default for OAuth2)
-					if err := r.ParseForm(); err != nil {
-						logger.Debug("failed to parse form")
-						httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-						return
-					}
-
-					tokenReq.ClientID = r.FormValue("client_id")
-					tokenReq.ClientSecret = r.FormValue("client_secret")
-					tokenReq.GrantType = r.FormValue("grant_type")
-				}
-
-				// Validate required fields
-				if tokenReq.ClientID == "" || tokenReq.ClientSecret == "" || tokenReq.GrantType == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Validate grant_type
-				if tokenReq.GrantType != "client_credentials" {
-					httperrors.RespondWithErrorMessage(w, http.StatusBadRequest, "unsupported grant_type, must be 'client_credentials'")
-					return
-				}
-
-				// Authenticate client and generate token
-				accessToken, expiresIn, err := mockOAuth2Service.ClientCredentials(r.Context(), tokenReq.ClientID, tokenReq.ClientSecret)
-				if err != nil {
-					logger.Warn("client credentials authentication failed")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				// Return token response
-				resp := response.ClientCredentialsResponse{
-					AccessToken: accessToken,
-					TokenType:   "Bearer",
-					ExpiresIn:   expiresIn,
-				}
-
-				shared.RespondWithJSON(w, http.StatusOK, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			h := shared.NewOAuth2Handler(mockOAuth2Service, logger)
+			handler := admin.Token(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

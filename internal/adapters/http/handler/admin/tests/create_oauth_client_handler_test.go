@@ -14,7 +14,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	admin "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
@@ -257,53 +257,10 @@ func TestCreateOAuthClientHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics admin.CreateOAuthClient but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				var createReq request.CreateOAuthClientRequest
-				if err := json.NewDecoder(r.Body).Decode(&createReq); err != nil {
-					logger.Debug("invalid request body")
-					httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-					return
-				}
-
-				// Validate required fields
-				if createReq.ClientID == "" || createReq.ClientSecret == "" || createReq.Name == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Create OAuth client
-				client, err := mockOAuth2Service.CreateClient(
-					r.Context(),
-					createReq.ClientID,
-					createReq.ClientSecret,
-					createReq.Name,
-					createReq.Description,
-					createReq.Scopes,
-				)
-				if err != nil {
-					logger.Error("failed to create oauth client")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				// Convert to DTO
-				resp := response.OAuthClientResponse{
-					ID:          client.ID,
-					ClientID:    client.ClientID,
-					Name:        client.Name,
-					Description: client.Description,
-					Scopes:      client.Scopes,
-					Active:      client.Active,
-					CreatedAt:   client.CreatedAt,
-					UpdatedAt:   client.UpdatedAt,
-				}
-
-				shared.RespondWithJSON(w, http.StatusCreated, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			// Create the real handler and call it, injecting our mock service
+			h := shared.NewAdminOAuthClientsHandler(mockOAuth2Service, logger)
+			handler := admin.CreateOAuthClient(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

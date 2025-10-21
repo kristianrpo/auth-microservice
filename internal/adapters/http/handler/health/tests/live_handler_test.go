@@ -6,8 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"database/sql"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/health"
@@ -38,10 +36,8 @@ func TestLiveHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var db *sql.DB
-			var redisClient *redis.Client
-			
-			handler := health.NewHealthHandler(db, redisClient, logger, "1.0.0")
+			// Live only reports alive; DB/Redis are not required for Live.
+			handler := health.NewHealthHandler(nil, nil, logger, "1.0.0")
 
 			req := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 			w := httptest.NewRecorder()
@@ -62,4 +58,3 @@ func TestLiveHandler(t *testing.T) {
 		})
 	}
 }
-

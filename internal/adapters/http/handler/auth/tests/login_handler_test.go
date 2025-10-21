@@ -13,7 +13,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	authhandler "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
@@ -216,42 +216,10 @@ func TestLoginHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics auth.Login but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				var loginReq request.LoginRequest
-				if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
-					logger.Debug("invalid request body")
-					httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-					return
-				}
-
-				// Basic validations
-				if loginReq.Email == "" || loginReq.Password == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Authenticate user
-				tokenPair, err := mockAuthService.Login(r.Context(), loginReq.Email, loginReq.Password)
-				if err != nil {
-					logger.Warn("login failed")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				// Convert to DTO
-				resp := response.TokenResponse{
-					AccessToken:  tokenPair.AccessToken,
-					RefreshToken: tokenPair.RefreshToken,
-					TokenType:    tokenPair.TokenType,
-					ExpiresIn:    tokenPair.ExpiresIn,
-				}
-
-				shared.RespondWithJSON(w, http.StatusOK, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			// Use real handler with mock service injected
+			h := shared.NewAuthHandler(mockAuthService, logger)
+			handler := authhandler.Login(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {
