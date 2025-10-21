@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -406,5 +407,60 @@ func TestAuthService_GetUserByID(t *testing.T) {
 				t.Errorf("GetUserByID() returned nil user")
 			}
 		})
+	}
+}
+
+func TestAuthService_Register_DuplicateIDCitizen(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+
+	mockUserRepo := &MockUserRepository{
+		ExistsFunc: func(ctx context.Context, email string) (bool, error) {
+			return false, nil
+		},
+		GetByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
+			// simulate existing user with same id_citizen
+			u, _ := domain.NewUser("other@example.com", "password123", "Other", idCitizen)
+			return u, nil
+		},
+	}
+
+	mockTokenRepo := &MockTokenRepository{}
+	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
+	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, logger)
+
+	_, err := authService.Register(context.Background(), "test@example.com", "password123", "Name", 123)
+	if err == nil {
+		t.Fatalf("expected error for duplicate id_citizen, got nil")
+	}
+	if !errors.Is(err, domainerrors.ErrUserAlreadyExists) {
+		t.Fatalf("expected ErrUserAlreadyExists, got %v", err)
+	}
+}
+
+func TestAuthService_Register_CreateReturnsAlreadyExists(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+
+	mockUserRepo := &MockUserRepository{
+		ExistsFunc: func(ctx context.Context, email string) (bool, error) {
+			return false, nil
+		},
+		GetByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
+			return nil, domainerrors.ErrUserNotFound
+		},
+		CreateFunc: func(ctx context.Context, user *domain.User) error {
+			return domainerrors.ErrUserAlreadyExists
+		},
+	}
+
+	mockTokenRepo := &MockTokenRepository{}
+	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
+	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, logger)
+
+	_, err := authService.Register(context.Background(), "test@example.com", "password123", "Name", 123)
+	if err == nil {
+		t.Fatalf("expected error when repo Create returns ErrUserAlreadyExists, got nil")
+	}
+	if !errors.Is(err, domainerrors.ErrUserAlreadyExists) {
+		t.Fatalf("expected ErrUserAlreadyExists, got %v", err)
 	}
 }
