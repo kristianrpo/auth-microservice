@@ -35,7 +35,7 @@ func TestRespondWithJSON(t *testing.T) {
 		{
 			name:           "respond with struct payload",
 			status:         http.StatusCreated,
-			payload:        struct{ ID string }{ ID: "123" },
+			payload:        struct{ ID string }{ID: "123"},
 			wantStatusCode: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
 				var resp struct{ ID string }
@@ -164,8 +164,8 @@ func TestRespondWithJSON(t *testing.T) {
 			},
 		},
 		{
-			name:           "respond with nested structure",
-			status:         http.StatusOK,
+			name:   "respond with nested structure",
+			status: http.StatusOK,
 			payload: map[string]interface{}{
 				"user": map[string]string{
 					"name":  "John",
@@ -250,4 +250,3 @@ func TestRespondWithJSON_StatusCode(t *testing.T) {
 		})
 	}
 }
-

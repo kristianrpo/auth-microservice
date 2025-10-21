@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
@@ -51,6 +51,14 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	)
 
 	if err != nil {
+		// Map Postgres unique constraint violation to domain error
+		if pqErr, ok := err.(*pq.Error); ok {
+			if string(pqErr.Code) == "23505" {
+				r.logger.Warn("unique constraint violation while creating user", zap.Error(err), zap.String("email", user.Email))
+				return domainerrors.ErrUserAlreadyExists
+			}
+		}
+
 		r.logger.Error("failed to create user", zap.Error(err), zap.String("email", user.Email))
 		return fmt.Errorf("failed to create user: %w", err)
 	}

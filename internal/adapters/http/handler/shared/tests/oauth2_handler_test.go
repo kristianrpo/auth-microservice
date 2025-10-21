@@ -71,4 +71,3 @@ func TestOAuth2Handler_Fields(t *testing.T) {
 		t.Errorf("OAuth2Handler.OAuth2Service = %v, want nil", handler.OAuth2Service)
 	}
 }
-

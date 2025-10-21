@@ -22,6 +22,16 @@ type OAuth2Service struct {
 	logger            *zap.Logger
 }
 
+// OAuth2ServiceInterface defines the subset of methods used by handlers so tests can inject mocks.
+type OAuth2ServiceInterface interface {
+	CreateClient(ctx context.Context, clientID, clientSecret, name, description string, scopes []string) (*domain.OAuthClient, error)
+	ListClients(ctx context.Context) ([]*domain.OAuthClient, error)
+	ClientCredentials(ctx context.Context, clientID, clientSecret string) (string, int64, error)
+	ValidateAccessToken(ctx context.Context, tokenString string) (*domain.OAuthTokenClaims, error)
+	GetClient(ctx context.Context, id string) (*domain.OAuthClient, error)
+	DeleteClient(ctx context.Context, id string) error
+}
+
 // NewOAuth2Service creates a new instance of OAuth2Service
 func NewOAuth2Service(
 	clientRepo ports.OAuthClientRepository,

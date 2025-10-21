@@ -22,6 +22,9 @@ type MockAuthService struct {
 	RefreshTokenFunc func(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
 	LogoutFunc       func(ctx context.Context, accessToken, refreshToken string) error
 	GetUserByIDFunc  func(ctx context.Context, userID string) (*domain.UserPublic, error)
+	// Additional mocked functions to satisfy services.AuthServiceInterface
+	ValidateAccessTokenFunc func(ctx context.Context, token string) (*domain.TokenClaims, error)
+	RevokeAllUserTokensFunc func(ctx context.Context, userID string) error
 }
 
 func (m *MockAuthService) Login(ctx context.Context, email, password string) (*domain.TokenPair, error) {
@@ -57,4 +60,18 @@ func (m *MockAuthService) GetUserByID(ctx context.Context, userID string) (*doma
 		return m.GetUserByIDFunc(ctx, userID)
 	}
 	return nil, nil
+}
+
+func (m *MockAuthService) ValidateAccessToken(ctx context.Context, token string) (*domain.TokenClaims, error) {
+	if m.ValidateAccessTokenFunc != nil {
+		return m.ValidateAccessTokenFunc(ctx, token)
+	}
+	return nil, nil
+}
+
+func (m *MockAuthService) RevokeAllUserTokens(ctx context.Context, userID string) error {
+	if m.RevokeAllUserTokensFunc != nil {
+		return m.RevokeAllUserTokensFunc(ctx, userID)
+	}
+	return nil
 }

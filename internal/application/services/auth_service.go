@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,18 @@ import (
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
+
+// AuthServiceInterface defines the methods of AuthService used by handlers and other consumers.
+// It allows tests to inject mocks that implement the same behavior.
+type AuthServiceInterface interface {
+	Register(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error)
+	Login(ctx context.Context, email, password string) (*domain.TokenPair, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
+	Logout(ctx context.Context, accessToken, refreshToken string) error
+	GetUserByID(ctx context.Context, userID string) (*domain.UserPublic, error)
+	ValidateAccessToken(ctx context.Context, token string) (*domain.TokenClaims, error)
+	RevokeAllUserTokens(ctx context.Context, userID string) error
+}
 
 // AuthService handles the business logic of authentication
 type AuthService struct {
@@ -51,6 +64,17 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 		return nil, domainerrors.ErrUserAlreadyExists
 	}
 
+	// Verificar si ya existe un usuario con el mismo id_citizen
+	if idCitizen > 0 {
+		if _, err := s.userRepo.GetByIDCitizen(ctx, idCitizen); err == nil {
+			s.logger.Warn("user already exists with same id_citizen", zap.Int("id_citizen", idCitizen))
+			return nil, domainerrors.ErrUserAlreadyExists
+		} else if err != nil && err != domainerrors.ErrUserNotFound {
+			s.logger.Error("failed to check user by id_citizen", zap.Error(err), zap.Int("id_citizen", idCitizen))
+			return nil, domainerrors.ErrInternal
+		}
+	}
+
 	// Create new user
 	user, err := domain.NewUser(email, password, name, idCitizen)
 	if err != nil {
@@ -60,6 +84,12 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 
 	// Save user to database
 	if err := s.userRepo.Create(ctx, user); err != nil {
+		// If repository reports the user already exists, propagate that domain error
+		if errors.Is(err, domainerrors.ErrUserAlreadyExists) {
+			s.logger.Error("failed to save user", zap.Error(err))
+			return nil, domainerrors.ErrUserAlreadyExists
+		}
+
 		s.logger.Error("failed to save user", zap.Error(err))
 		return nil, domainerrors.ErrInternal
 	}

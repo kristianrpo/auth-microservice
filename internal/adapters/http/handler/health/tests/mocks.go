@@ -27,7 +27,7 @@ func (m *MockRedisClient) Ping(ctx context.Context) *redis.StatusCmd {
 	if m.PingResult != nil {
 		return m.PingResult
 	}
-	
+
 	cmd := redis.NewStatusCmd(ctx)
 	if m.PingErr != nil {
 		cmd.SetErr(m.PingErr)
@@ -63,4 +63,3 @@ type TestHealthHandler struct {
 	logger      interface{}
 	version     string
 }
-

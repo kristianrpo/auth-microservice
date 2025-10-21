@@ -14,7 +14,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	authhandler "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
@@ -252,45 +252,10 @@ func TestRegisterHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics auth.Register but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				var regReq request.RegisterRequest
-				if err := json.NewDecoder(r.Body).Decode(&regReq); err != nil {
-					logger.Debug("invalid request body")
-					httperrors.RespondWithError(w, httperrors.ErrInvalidRequestBody)
-					return
-				}
-
-				// Basic validations
-				if regReq.IDCitizen <= 0 || regReq.Email == "" || regReq.Password == "" || regReq.Name == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Register user
-				user, err := mockAuthService.Register(r.Context(), regReq.Email, regReq.Password, regReq.Name, regReq.IDCitizen)
-				if err != nil {
-					logger.Warn("failed to register user")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				// Convert to DTO
-				resp := response.UserResponse{
-					ID:        user.ID,
-					IDCitizen: user.IDCitizen,
-					Email:     user.Email,
-					Name:      user.Name,
-					Role:      user.Role,
-					CreatedAt: user.CreatedAt,
-					UpdatedAt: user.UpdatedAt,
-				}
-
-				shared.RespondWithJSON(w, http.StatusCreated, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			// Use real handler with mock service injected
+			h := shared.NewAuthHandler(mockAuthService, logger)
+			handler := authhandler.Register(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

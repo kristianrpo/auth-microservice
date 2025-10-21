@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/health"
 )
 
 func TestReadyHandler(t *testing.T) {
@@ -107,27 +107,8 @@ func TestReadyHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 			w := httptest.NewRecorder()
 
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				ctx := r.Context()
-
-				if err := mockDB.PingContext(ctx); err != nil {
-					logger.Warn("database health check failed")
-					httperrors.RespondWithErrorMessage(w, http.StatusServiceUnavailable, "database not ready")
-					return
-				}
-
-				if err := mockRedis.Ping(ctx).Err(); err != nil {
-					logger.Warn("redis health check failed")
-					httperrors.RespondWithErrorMessage(w, http.StatusServiceUnavailable, "redis not ready")
-					return
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				_ = json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
-			}
-
-			handlerFunc(w, req)
+			handler := health.NewHealthHandler(mockDB, mockRedis, logger, "1.0.0-test")
+			handler.Ready(w, req)
 
 			if w.Code != tt.wantStatusCode {
 				t.Errorf("status code = %v, want %v", w.Code, tt.wantStatusCode)
@@ -139,4 +120,3 @@ func TestReadyHandler(t *testing.T) {
 		})
 	}
 }
-

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
 
@@ -43,7 +44,8 @@ func (m *MockUserRepository) GetByIDCitizen(ctx context.Context, idCitizen int) 
 	if m.GetByIDCitizenFunc != nil {
 		return m.GetByIDCitizenFunc(ctx, idCitizen)
 	}
-	return nil, nil
+	// Default behavior: not found
+	return nil, domainerrors.ErrUserNotFound
 }
 
 func (m *MockUserRepository) Update(ctx context.Context, user *domain.User) error {

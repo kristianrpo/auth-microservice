@@ -8,12 +8,12 @@ import (
 
 // AuthHandler manages the requests related to authentication
 type AuthHandler struct {
-	AuthService *services.AuthService
+	AuthService services.AuthServiceInterface
 	Logger      *zap.Logger
 }
 
 // NewAuthHandler creates a new instance of AuthHandler
-func NewAuthHandler(authService *services.AuthService, logger *zap.Logger) *AuthHandler {
+func NewAuthHandler(authService services.AuthServiceInterface, logger *zap.Logger) *AuthHandler {
 	return &AuthHandler{
 		AuthService: authService,
 		Logger:      logger,

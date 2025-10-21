@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	admin "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 )
@@ -204,35 +204,9 @@ func TestListOAuthClientsHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics admin.ListOAuthClients but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				clients, err := mockOAuth2Service.ListClients(r.Context())
-				if err != nil {
-					logger.Error("failed to list oauth clients")
-					httperrors.RespondWithError(w, httperrors.ErrInternalServer)
-					return
-				}
-
-				// Convert to DTOs
-				var clientResponses []response.OAuthClientResponse
-				for _, client := range clients {
-					clientResponses = append(clientResponses, response.OAuthClientResponse{
-						ID:          client.ID,
-						ClientID:    client.ClientID,
-						Name:        client.Name,
-						Description: client.Description,
-						Scopes:      client.Scopes,
-						Active:      client.Active,
-						CreatedAt:   client.CreatedAt,
-						UpdatedAt:   client.UpdatedAt,
-					})
-				}
-
-				shared.RespondWithJSON(w, http.StatusOK, clientResponses)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			h := shared.NewAdminOAuthClientsHandler(mockOAuth2Service, logger)
+			handler := admin.ListOAuthClients(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

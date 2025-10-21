@@ -7,14 +7,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"go.uber.org/zap"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/request"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
-	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
+	authhandler "github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 )
@@ -196,40 +195,10 @@ func TestLogoutHandler(t *testing.T) {
 			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create inline handler function that mimics auth.Logout but uses our mock
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				// Get access token from header
-				authHeader := r.Header.Get("Authorization")
-				var accessToken string
-				if authHeader != "" {
-					parts := strings.Split(authHeader, " ")
-					if len(parts) == 2 {
-						accessToken = parts[1]
-					}
-				}
-
-				// Get refresh token from body (optional)
-				var logoutReq request.LogoutRequest
-				_ = json.NewDecoder(r.Body).Decode(&logoutReq)
-
-				if accessToken == "" {
-					httperrors.RespondWithError(w, httperrors.ErrRequiredField)
-					return
-				}
-
-				// Perform logout
-				if err := mockAuthService.Logout(r.Context(), accessToken, logoutReq.RefreshToken); err != nil {
-					logger.Error("logout failed")
-					httperrors.RespondWithDomainError(w, err)
-					return
-				}
-
-				resp := response.MessageResponse{Message: "logout successful"}
-				shared.RespondWithJSON(w, http.StatusOK, resp)
-			}
-
-			// Call handler
-			handlerFunc(w, req)
+			// Use real handler with mock service injected
+			h := shared.NewAuthHandler(mockAuthService, logger)
+			handler := authhandler.Logout(h)
+			handler(w, req)
 
 			// Check status code
 			if w.Code != tt.wantStatusCode {

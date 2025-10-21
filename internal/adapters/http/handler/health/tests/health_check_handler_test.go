@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
+	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/health"
 )
 
 func TestHealthCheckHandler(t *testing.T) {
@@ -129,50 +129,8 @@ func TestHealthCheckHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/health", nil)
 			w := httptest.NewRecorder()
 
-			handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-				ctx := r.Context()
-				services := make(map[string]string)
-
-				if err := mockDB.PingContext(ctx); err != nil {
-					logger.Warn("database health check failed")
-					services["database"] = "unhealthy"
-				} else {
-					services["database"] = "healthy"
-				}
-
-				if err := mockRedis.Ping(ctx).Err(); err != nil {
-					logger.Warn("redis health check failed")
-					services["redis"] = "unhealthy"
-				} else {
-					services["redis"] = "healthy"
-				}
-
-				overallStatus := "healthy"
-				for _, status := range services {
-					if status == "unhealthy" {
-						overallStatus = "unhealthy"
-						break
-					}
-				}
-
-				resp := response.HealthResponse{
-					Status:    overallStatus,
-					Timestamp: time.Now(),
-					Version:   "1.0.0-test",
-					Services:  services,
-				}
-
-				statusCode := http.StatusOK
-				if overallStatus == "unhealthy" {
-					statusCode = http.StatusServiceUnavailable
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(statusCode)
-				_ = json.NewEncoder(w).Encode(resp)
-			}
-
-			handlerFunc(w, req)
+			handler := health.NewHealthHandler(mockDB, mockRedis, logger, "1.0.0-test")
+			handler.Health(w, req)
 
 			if w.Code != tt.wantStatusCode {
 				t.Errorf("status code = %v, want %v", w.Code, tt.wantStatusCode)
@@ -188,4 +146,3 @@ func TestHealthCheckHandler(t *testing.T) {
 		})
 	}
 }
-
