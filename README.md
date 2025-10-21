@@ -19,17 +19,6 @@ Microservicio de autenticación y autorización basado en JWT para aplicaciones 
 - ✅ **Horizontal Pod Autoscaler (HPA)**
 - ✅ **CI/CD con GitHub Actions**
 
-## 📋 Tabla de Contenidos
-
-- [Arquitectura](#arquitectura)
-- [Tecnologías](#tecnologías)
-- [Requisitos](#requisitos)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [API Endpoints](#api-endpoints)
-- [Autenticación JWT](#autenticación-jwt)
-- [Deployment](#deployment)
-- [Monitoreo](#monitoreo)
 
 ## 🏗️ Arquitectura
 
@@ -138,64 +127,6 @@ Esto iniciará:
 - Prometheus en `localhost:9090`
 - Grafana en `localhost:3000`
 
-## ⚙️ Configuración
-
-### Variables de Entorno
-
-| Variable | Descripción | Default | Requerido |
-|----------|-------------|---------|-----------|
-| `SERVER_HOST` | Host del servidor | `0.0.0.0` | No |
-| `SERVER_PORT` | Puerto del servidor | `8080` | No |
-| `DB_HOST` | Host de PostgreSQL | `localhost` | Sí |
-| `DB_PORT` | Puerto de PostgreSQL | `5432` | No |
-| `DB_USER` | Usuario de PostgreSQL | `authuser` | Sí |
-| `DB_PASSWORD` | Contraseña de PostgreSQL | - | **Sí** |
-| `DB_NAME` | Nombre de la base de datos | `authdb` | No |
-| `DB_SSL_MODE` | Modo SSL de PostgreSQL | `disable` | No |
-| `REDIS_HOST` | Host de Redis | `localhost` | Sí |
-| `REDIS_PORT` | Puerto de Redis | `6379` | No |
-| `REDIS_PASSWORD` | Contraseña de Redis | - | No |
-| `REDIS_DB` | Número de base de datos Redis | `0` | No |
-| `JWT_SECRET` | Clave secreta para JWT (min 32 chars) | - | **Sí** |
-| `JWT_ACCESS_TOKEN_DURATION` | Duración del access token | `15m` | No |
-| `JWT_REFRESH_TOKEN_DURATION` | Duración del refresh token | `168h` | No |
-| `APP_ENV` | Entorno de la aplicación | `development` | No |
-| `LOG_LEVEL` | Nivel de logging | `info` | No |
-
-## 🎯 Uso
-
-### Desarrollo Local
-
-```bash
-# Iniciar servicios
-make docker-up
-
-# Ver logs
-make docker-logs
-
-# Ejecutar tests
-make test
-
-# Ejecutar con coverage
-make test-coverage
-
-# Linting
-make lint
-
-# Formatear código
-make fmt
-```
-
-### Sin Docker
-
-```bash
-# Asegúrate de tener PostgreSQL y Redis corriendo
-
-# Ejecutar la aplicación
-make run
-# o
-go run ./cmd/server/main.go
-```
 
 ## 📡 API Endpoints
 
@@ -283,19 +214,7 @@ GET /api/v1/auth/me
 Authorization: Bearer {access_token}
 ```
 
-### Health Checks
-
-```http
-GET /api/v1/health              # Health check completo
-GET /api/v1/health/ready        # Readiness probe
-GET /api/v1/health/live         # Liveness probe
-```
-
-### Métricas
-
-```http
-GET /api/v1/metrics             # Métricas Prometheus
-```
+<!-- Health and metrics details consolidated in the 'Endpoints adicionales y notas de desarrollo' section below -->
 
 ## 🔐 Autenticación JWT
 
@@ -331,40 +250,6 @@ token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error)
 })
 ```
 
-## 🚢 Deployment
-
-### Kubernetes con Kustomize
-
-```bash
-# Development
-kubectl apply -k k8s/overlays/dev
-
-# Staging
-kubectl apply -k k8s/overlays/staging
-
-# Production
-kubectl apply -k k8s/overlays/production
-```
-
-Ver más detalles en [`k8s/README.md`](k8s/README.md)
-
-### Terraform (AWS)
-
-```bash
-cd infra/terraform/aws
-
-# Inicializar
-terraform init
-
-# Planificar
-terraform plan -var-file=terraform.tfvars
-
-# Aplicar
-terraform apply -var-file=terraform.tfvars
-```
-
-Ver más detalles en [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md)
-
 ## 📊 Monitoreo
 
 ### Prometheus
@@ -376,38 +261,6 @@ Métricas disponibles en `http://localhost:9090`
 Dashboards en `http://localhost:3000`
 - **Usuario**: `admin`
 - **Contraseña**: `admin`
-
-### Logs
-
-```bash
-# Ver logs locales
-make docker-logs
-
-# Ver logs en Kubernetes
-kubectl logs -l app=auth-service -f
-```
-
-## 🧪 Testing
-
-```bash
-# Ejecutar todos los tests
-make test
-
-# Con coverage
-make test-coverage
-
-# Ver coverage en el navegador
-open coverage.html
-```
-
-## 🔒 Seguridad
-
-- ✅ **Passwords**: Hasheadas con bcrypt (cost 10)
-- ✅ **JWT**: Firmados con HS256
-- ✅ **HTTPS**: Recomendado en producción
-- ✅ **Rate Limiting**: Configurado en Ingress
-- ✅ **SQL Injection**: Protección con prepared statements
-- ✅ **Secrets**: Gestionados con External Secrets Operator
 
 ## 🤝 Contribución
 
@@ -421,17 +274,113 @@ open coverage.html
 
 MIT License - Ver [LICENSE](LICENSE) para más detalles
 
-## 👤 Autor
+## 📚 Endpoints adicionales y notas de desarrollo
 
-**Kristian Restrepo**
-- GitHub: [@kristianrpo](https://github.com/kristianrpo)
-- Repositorios relacionados:
-  - [Infrastructure Shared](https://github.com/kristianrpo/infrastructure-shared)
-  - [Documents Management](https://github.com/kristianrpo/documents-management-microservice)
+### Admin (gestión de OAuth clients)
 
-## 🙏 Agradecimientos
+Estos endpoints están pensados para administración (service-to-service) y requieren credenciales adecuadas o token admin.
 
-- Clean Architecture principles
-- JWT best practices
-- Go microservices patterns
+- POST /api/v1/admin/oauth/clients
+  - Crea un nuevo cliente OAuth
+  - Body (JSON):
+    {
+      "name": "My Client",
+      "redirect_uris": ["https://app.example.com/callback"],
+      "scopes": ["read","write"]
+    }
+  - Respuesta (201): información del cliente (client_id, client_secret solo al crear, scopes, active)
+
+- GET /api/v1/admin/oauth/clients
+  - Lista los OAuth clients registrados (soporta paginación)
+
+- POST /api/v1/admin/oauth/clients/{client_id}/token
+  - Emite un token por client-credentials (uso administrativo)
+
+### OAuth2 — Client Credentials
+
+Flujo para auth máquina a máquina.
+
+- POST /oauth2/token
+  - Content-Type: application/x-www-form-urlencoded
+  - Body: grant_type=client_credentials&client_id={id}&client_secret={secret}&scope={scopes}
+  - Respuesta (200): access_token, token_type, expires_in
+
+### Métricas y monitoring
+
+- GET /api/v1/metrics
+  - Endpoint compatible con Prometheus que expone métricas de requests, latencias, errores en repositorios y generación de tokens.
+
+### Health checks (detalles)
+
+- GET /api/v1/health
+  - Comprueba liveness y readiness y los dependientes (Postgres, Redis, RabbitMQ si está configurado). Devuelve 200 si todo OK.
+
+- GET /api/v1/health/ready
+  - Readiness: pruebas más completas (ping a la DB y cache).
+
+- GET /api/v1/health/live
+  - Liveness: verificación ligera de que el proceso está arriba.
+
+### Eventos / Webhooks (RabbitMQ)
+
+El servicio publica eventos en RabbitMQ cuando ocurren acciones relevantes (ej. user.registered). Los consumidores pueden suscribirse al exchange/queue configurado.
+
+Ejemplo de evento: `user.registered`
+
+Payload:
+
+```json
+{
+  "user_id": "user-123",
+  "email": "user@example.com",
+  "created_at": "2025-10-20T12:34:56Z"
+}
+```
+
+### Variables de entorno clave
+
+- APP_PORT: puerto donde corre el servicio (por defecto 8080)
+- DATABASE_URL: URL de conexión a Postgres (ej: `postgres://user:pass@host:5432/dbname?sslmode=disable`)
+- REDIS_ADDR: dirección de Redis (ej: `localhost:6379`)
+- JWT_SECRET: secreto para firmar JWTs (debe ser >= 32 caracteres en prod)
+- LOG_LEVEL: nivel de logging (debug, info, warn, error)
+
+### Ejecutar tests localmente
+
+Para ejecutar todos los tests del repositorio:
+
+```bash
+go test ./...
+```
+
+Para ejecutar sólo los tests en `internal` y generar coverage (excluye paquetes `/tests`):
+
+```bash
+go test ./internal/.../tests -coverpkg=$(go list ./internal/... | grep -v '/tests' | tr '\n' ',' | sed 's/,$//') -coverprofile=coverage.out -covermode=atomic
+go tool cover -func=coverage.out | tail -1
+```
+
+### Desarrollo local rápido
+
+1. Levantar infra mínima con Docker Compose (Postgres + Redis + RabbitMQ):
+
+```bash
+docker-compose up -d
+```
+
+2. Exportar variables de ejemplo:
+
+```bash
+export DATABASE_URL=postgres://postgres:postgres@localhost:5432/auth_db?sslmode=disable
+export REDIS_ADDR=localhost:6379
+export JWT_SECRET=test-secret-key-at-least-32-chars-long
+```
+
+3. Ejecutar el servicio en modo desarrollo:
+
+```bash
+go run ./cmd/server
+```
+
+4. Revisa logs y endpoints en `http://localhost:8080/api/v1`.
 
