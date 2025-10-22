@@ -21,8 +21,7 @@ spec:
     metadata:
       labels:
         app: auth-service
-      annotations:
-        # This annotation will be updated by CD pipeline to force pod restarts
+      annotations: {}
     spec:
       serviceAccountName: auth-sa
       # InitContainer que espera a que el secret esté disponible
@@ -48,13 +47,13 @@ spec:
                 name: auth-secrets
           startupProbe:
             httpGet:
-              path: /health
+              path: /api/v1/health
               port: http
             failureThreshold: 60
             periodSeconds: 2
           readinessProbe:
             httpGet:
-              path: /health/ready
+              path: /api/v1/health/ready
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -62,7 +61,7 @@ spec:
             failureThreshold: 6
           livenessProbe:
             httpGet:
-              path: /health/live
+              path: /api/v1/health/live
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10

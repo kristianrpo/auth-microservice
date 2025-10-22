@@ -74,3 +74,4 @@ temp/
 # Air (live reload)
 tmp/
 
+k8s/overlays/local/.env.auth
