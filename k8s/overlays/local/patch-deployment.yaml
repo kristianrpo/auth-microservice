@@ -9,3 +9,6 @@ spec:
     spec:
       serviceAccountName: auth-sa
       initContainers: []
+      containers:
+        - name: auth-service
+          imagePullPolicy: Always

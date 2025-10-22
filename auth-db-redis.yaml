@@ -1,0 +1,214 @@
+# Namespace (créalo si aún no existe)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+---
+# ======= SECRETS =======
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: auth
+type: Opaque
+stringData:
+  POSTGRES_USER: "authuser"
+  POSTGRES_PASSWORD: "authpassword"
+  POSTGRES_DB: "authdb"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: auth
+type: Opaque
+stringData:
+  REDIS_PASSWORD: "redispassword"
+---
+# ======= PVCs =======
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-data
+  namespace: auth
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+  # storageClassName: standard   # <- descomenta y ajusta si necesitas una SC específica
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: auth
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: standard
+---
+# ======= POSTGRES =======
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: auth
+  labels: { app: postgresql }
+spec:
+  serviceName: "postgresql"
+  replicas: 1
+  selector:
+    matchLabels: { app: postgresql }
+  template:
+    metadata:
+      labels: { app: postgresql }
+    spec:
+      securityContext:
+        fsGroup: 999          # postgres
+      containers:
+        - name: postgres
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: tcp-postgres
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -lc
+                - |
+                  pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -lc
+                - |
+                  pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgresql-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: auth
+  labels: { app: postgresql }
+spec:
+  type: ClusterIP
+  selector: { app: postgresql }
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+# ======= REDIS =======
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: auth
+  labels: { app: redis }
+spec:
+  serviceName: "redis-master"
+  replicas: 1
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          # Lanzamos redis-server con password y AOF
+          command: ["sh","-lc"]
+          args:
+            - |
+              exec redis-server \
+                --appendonly yes \
+                --save "60 1" \
+                --requirepass "$REDIS_PASSWORD"
+          envFrom:
+            - secretRef:
+                name: redis-secret
+          ports:
+            - containerPort: 6379
+              name: redis
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -lc
+                - |
+                  redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -lc
+                - |
+                  redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: redis-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  namespace: auth
+  labels: { app: redis }
+spec:
+  type: ClusterIP
+  selector: { app: redis }
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

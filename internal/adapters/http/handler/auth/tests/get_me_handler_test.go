@@ -34,7 +34,7 @@ func TestGetMeHandler(t *testing.T) {
 			name: "successful get user info",
 			setupContext: func(ctx context.Context) context.Context {
 				claims := &domain.TokenClaims{
-					UserID: "user-123",
+					: "user-123",
 					Email:  "test@example.com",
 					Role:   domain.RoleUser,
 				}

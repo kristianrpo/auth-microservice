@@ -44,7 +44,7 @@ func (m *RoleMiddleware) RequireRole(allowedRoles ...domain.Role) func(nethttp.H
 
 			if !hasRole {
 				m.logger.Warn("user does not have required role",
-					zap.String("user_id", claims.UserID),
+					zap.Int("id_citizen", claims.IDCitizen),
 					zap.String("user_role", claims.Role.String()),
 					zap.Any("required_roles", allowedRoles))
 				httperrors.RespondWithError(w, httperrors.ErrForbidden)
@@ -52,7 +52,7 @@ func (m *RoleMiddleware) RequireRole(allowedRoles ...domain.Role) func(nethttp.H
 			}
 
 			m.logger.Debug("user has required role",
-				zap.String("user_id", claims.UserID),
+				zap.Int("id_citizen", claims.IDCitizen),
 				zap.String("role", claims.Role.String()))
 
 			next.ServeHTTP(w, r)

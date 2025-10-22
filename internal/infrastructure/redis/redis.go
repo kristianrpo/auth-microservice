@@ -43,7 +43,7 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, token string, d
 		return fmt.Errorf("failed to store refresh token: %w", err)
 	}
 
-	r.logger.Debug("refresh token stored successfully", zap.String("user_id", data.UserID))
+	r.logger.Debug("refresh token stored successfully", zap.Int("id_citizen", data.IDCitizen))
 	return nil
 }
 
@@ -111,7 +111,7 @@ func (r *TokenRepository) IsTokenBlacklisted(ctx context.Context, token string) 
 }
 
 // DeleteUserTokens deletes all refresh tokens of a user
-func (r *TokenRepository) DeleteUserTokens(ctx context.Context, userID string) error {
+func (r *TokenRepository) DeleteUserTokens(ctx context.Context, idCitizen int) error {
 	pattern := "refresh_token:*"
 
 	iter := r.client.Scan(ctx, 0, pattern, 0).Iterator()
@@ -128,7 +128,7 @@ func (r *TokenRepository) DeleteUserTokens(ctx context.Context, userID string) e
 			continue
 		}
 
-		if data.UserID == userID {
+		if data.IDCitizen == idCitizen {
 			if err := r.client.Del(ctx, key).Err(); err != nil {
 				r.logger.Error("failed to delete user token", zap.Error(err), zap.String("key", key))
 			}
@@ -136,11 +136,11 @@ func (r *TokenRepository) DeleteUserTokens(ctx context.Context, userID string) e
 	}
 
 	if err := iter.Err(); err != nil {
-		r.logger.Error("failed to iterate user tokens", zap.Error(err), zap.String("user_id", userID))
+		r.logger.Error("failed to iterate user tokens", zap.Error(err), zap.Int("id_citizen", idCitizen))
 		return fmt.Errorf("failed to delete user tokens: %w", err)
 	}
 
-	r.logger.Info("user tokens deleted successfully", zap.String("user_id", userID))
+	r.logger.Info("user tokens deleted successfully", zap.Int("id_citizen", idCitizen))
 	return nil
 }
 
