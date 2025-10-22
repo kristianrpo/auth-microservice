@@ -1,8 +1,8 @@
-name: Documents Microservice CI
+name: Auth Microservice CI
 
 on:
   push:
-    branches: [develop, main]
+    branches: [develop]
   pull_request:
     branches: [develop]
 
@@ -108,7 +108,7 @@ jobs:
           file: ./Dockerfile
           push: false
           load: false
-          tags: documents-microservice:${{ github.sha }}
+          tags: auth-microservice:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
