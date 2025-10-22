@@ -34,14 +34,14 @@ func TestGetMeHandler(t *testing.T) {
 			name: "successful get user info",
 			setupContext: func(ctx context.Context) context.Context {
 				claims := &domain.TokenClaims{
-					: "user-123",
-					Email:  "test@example.com",
-					Role:   domain.RoleUser,
+					IDCitizen: 12345,
+					Email:     "test@example.com",
+					Role:      domain.RoleUser,
 				}
 				return context.WithValue(ctx, middleware.UserContextKey, claims)
 			},
 			mockSetup: func(m *MockAuthService) {
-				m.GetUserByIDFunc = func(ctx context.Context, userID string) (*domain.UserPublic, error) {
+				m.GetUserByIDCitizenFunc = func(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
 					return &domain.UserPublic{
 						ID:        "user-123",
 						IDCitizen: 12345,
@@ -97,14 +97,14 @@ func TestGetMeHandler(t *testing.T) {
 			name: "user not found",
 			setupContext: func(ctx context.Context) context.Context {
 				claims := &domain.TokenClaims{
-					UserID: "nonexistent-user",
-					Email:  "nonexistent@example.com",
-					Role:   domain.RoleUser,
+					IDCitizen: 54321,
+					Email:     "nonexistent@example.com",
+					Role:      domain.RoleUser,
 				}
 				return context.WithValue(ctx, middleware.UserContextKey, claims)
 			},
 			mockSetup: func(m *MockAuthService) {
-				m.GetUserByIDFunc = func(ctx context.Context, userID string) (*domain.UserPublic, error) {
+				m.GetUserByIDCitizenFunc = func(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
 					return nil, domainerrors.ErrUserNotFound
 				}
 			},
@@ -124,14 +124,14 @@ func TestGetMeHandler(t *testing.T) {
 			name: "internal server error",
 			setupContext: func(ctx context.Context) context.Context {
 				claims := &domain.TokenClaims{
-					UserID: "user-123",
-					Email:  "test@example.com",
-					Role:   domain.RoleUser,
+					IDCitizen: 12345,
+					Email:     "test@example.com",
+					Role:      domain.RoleUser,
 				}
 				return context.WithValue(ctx, middleware.UserContextKey, claims)
 			},
 			mockSetup: func(m *MockAuthService) {
-				m.GetUserByIDFunc = func(ctx context.Context, userID string) (*domain.UserPublic, error) {
+				m.GetUserByIDCitizenFunc = func(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
 					return nil, errors.New("database error")
 				}
 			},
@@ -151,14 +151,14 @@ func TestGetMeHandler(t *testing.T) {
 			name: "admin user",
 			setupContext: func(ctx context.Context) context.Context {
 				claims := &domain.TokenClaims{
-					UserID: "admin-123",
-					Email:  "admin@example.com",
-					Role:   domain.RoleAdmin,
+					IDCitizen: 99999,
+					Email:     "admin@example.com",
+					Role:      domain.RoleAdmin,
 				}
 				return context.WithValue(ctx, middleware.UserContextKey, claims)
 			},
 			mockSetup: func(m *MockAuthService) {
-				m.GetUserByIDFunc = func(ctx context.Context, userID string) (*domain.UserPublic, error) {
+				m.GetUserByIDCitizenFunc = func(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
 					return &domain.UserPublic{
 						ID:        "admin-123",
 						IDCitizen: 99999,

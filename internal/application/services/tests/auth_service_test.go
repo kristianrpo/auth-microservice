@@ -217,7 +217,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
 	// Generate a valid refresh token
-	validRefreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
+	validRefreshToken, _ := jwtService.GenerateRefreshToken(12345, "test@example.com", domain.RoleUser)
 
 	tests := []struct {
 		name                   string
@@ -235,7 +235,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 			},
 			getRefreshTokenFunc: func(ctx context.Context, token string) (*domain.RefreshTokenData, error) {
 				return &domain.RefreshTokenData{
-					UserID: "user-123",
+					IDCitizen: 12345,
 					Email:  "test@example.com",
 				}, nil
 			},
@@ -308,8 +308,8 @@ func TestAuthService_Logout(t *testing.T) {
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
 	// Generate valid tokens
-	validAccessToken, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
-	validRefreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
+	validAccessToken, _ := jwtService.GenerateAccessToken(12345, "test@example.com", domain.RoleUser)
+	validRefreshToken, _ := jwtService.GenerateRefreshToken(12345, "test@example.com", domain.RoleUser)
 
 	tests := []struct {
 		name         string
@@ -358,22 +358,22 @@ func TestAuthService_GetUserByID(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		userID      string
-		getByIDFunc func(ctx context.Context, id string) (*domain.User, error)
+		idCitizen   int
+		getByIDCitizenFunc func(ctx context.Context, idCitizen int) (*domain.User, error)
 		wantErr     bool
 	}{
 		{
 			name:   "user found",
-			userID: "user-123",
-			getByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
+			idCitizen: 12345,
+			getByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
 				return testUser, nil
 			},
 			wantErr: false,
 		},
 		{
 			name:   "user not found",
-			userID: "nonexistent",
-			getByIDFunc: func(ctx context.Context, id string) (*domain.User, error) {
+			idCitizen: 99999,
+			getByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
 				return nil, domainerrors.ErrUserNotFound
 			},
 			wantErr: true,
@@ -383,13 +383,13 @@ func TestAuthService_GetUserByID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUserRepo := &MockUserRepository{
-				GetByIDFunc: tt.getByIDFunc,
+				GetByIDCitizenFunc: tt.getByIDCitizenFunc,
 			}
 			mockTokenRepo := &MockTokenRepository{}
 			jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, logger)
 
-			user, err := authService.GetUserByID(context.Background(), tt.userID)
+			user, err := authService.GetUserByIDCitizen(context.Background(), tt.idCitizen)
 
 			if tt.wantErr {
 				if err == nil {

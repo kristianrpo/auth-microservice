@@ -17,7 +17,7 @@ func TestRequireRole_AdminAllowed(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	// Put token claims in context with admin role
-	ctx := context.WithValue(req.Context(), middleware.UserContextKey, &domain.TokenClaims{UserID: "user-123", Role: domain.RoleAdmin})
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, &domain.TokenClaims{IDCitizen: 123, Role: domain.RoleAdmin})
 	req = req.WithContext(ctx)
 
 	w := httptest.NewRecorder()
@@ -38,7 +38,7 @@ func TestRequireRole_UserAllowed(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	// Put token claims in context with user role
-	ctx := context.WithValue(req.Context(), middleware.UserContextKey, &domain.TokenClaims{UserID: "user-456", Role: domain.RoleUser})
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, &domain.TokenClaims{IDCitizen: 456, Role: domain.RoleUser})
 	req = req.WithContext(ctx)
 
 	w := httptest.NewRecorder()
