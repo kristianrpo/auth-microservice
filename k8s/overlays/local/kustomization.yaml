@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: auth
+
+resources:
+  - ../../base
+  - ingress-local.yaml
+
+images:
+  - name: REPOSITORY/auth-microservice
+    newName: kristianrpo30/auth-microservice
+    newTag: latest
+
+patches:
+  - path: patch-deployment.yaml
+  - path: patch-service.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+  - name: auth-secrets
+    envs:
+      - .env.auth
