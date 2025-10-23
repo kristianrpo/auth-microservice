@@ -15,38 +15,38 @@ func TestJWTService_GenerateAccessToken(t *testing.T) {
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
 	tests := []struct {
-		name    string
-		idCitizen  int
-		email   string
-		role    domain.Role
-		wantErr bool
+		name      string
+		idCitizen int
+		email     string
+		role      domain.Role
+		wantErr   bool
 	}{
 		{
-			name:    "valid token generation",
-		idCitizen: 123,
-			email:   "test@example.com",
-			role:    domain.RoleUser,
-			wantErr: false,
+			name:      "valid token generation",
+			idCitizen: 123,
+			email:     "test@example.com",
+			role:      domain.RoleUser,
+			wantErr:   false,
 		},
 		{
-			name:    "empty user id",
-		idCitizen: 0,
-			email:   "test@example.com",
-			role:    domain.RoleUser,
-			wantErr: false, // Should still generate token
+			name:      "empty user id",
+			idCitizen: 0,
+			email:     "test@example.com",
+			role:      domain.RoleUser,
+			wantErr:   false, // Should still generate token
 		},
 		{
-			name:    "admin role",
-		idCitizen: 999,
-			email:   "admin@example.com",
-			role:    domain.RoleAdmin,
-			wantErr: false,
+			name:      "admin role",
+			idCitizen: 999,
+			email:     "admin@example.com",
+			role:      domain.RoleAdmin,
+			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		token, err := jwtService.GenerateAccessToken(tt.idCitizen, tt.email, tt.role)
+			token, err := jwtService.GenerateAccessToken(tt.idCitizen, tt.email, tt.role)
 
 			if tt.wantErr && err == nil {
 				t.Errorf("GenerateAccessToken() expected error but got none")

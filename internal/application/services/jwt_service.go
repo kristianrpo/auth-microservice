@@ -99,9 +99,9 @@ func (s *JWTService) ValidateToken(tokenString string) (*domain.TokenClaims, err
 
 	return &domain.TokenClaims{
 		IDCitizen: claims.IDCitizen,
-		Email:  claims.Email,
-		Role:   claims.Role,
-		Type:   claims.Type,
+		Email:     claims.Email,
+		Role:      claims.Role,
+		Type:      claims.Type,
 	}, nil
 }
 

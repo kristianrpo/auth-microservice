@@ -236,7 +236,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 			getRefreshTokenFunc: func(ctx context.Context, token string) (*domain.RefreshTokenData, error) {
 				return &domain.RefreshTokenData{
 					IDCitizen: 12345,
-					Email:  "test@example.com",
+					Email:     "test@example.com",
 				}, nil
 			},
 			wantErr: false,
@@ -357,13 +357,13 @@ func TestAuthService_GetUserByID(t *testing.T) {
 	testUser.ID = "user-123"
 
 	tests := []struct {
-		name        string
-		idCitizen   int
+		name               string
+		idCitizen          int
 		getByIDCitizenFunc func(ctx context.Context, idCitizen int) (*domain.User, error)
-		wantErr     bool
+		wantErr            bool
 	}{
 		{
-			name:   "user found",
+			name:      "user found",
 			idCitizen: 12345,
 			getByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
 				return testUser, nil
@@ -371,7 +371,7 @@ func TestAuthService_GetUserByID(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "user not found",
+			name:      "user not found",
 			idCitizen: 99999,
 			getByIDCitizenFunc: func(ctx context.Context, idCitizen int) (*domain.User, error) {
 				return nil, domainerrors.ErrUserNotFound
