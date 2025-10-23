@@ -20,9 +20,9 @@ type AuthServiceInterface interface {
 	Login(ctx context.Context, email, password string) (*domain.TokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
 	Logout(ctx context.Context, accessToken, refreshToken string) error
-	GetUserByID(ctx context.Context, userID string) (*domain.UserPublic, error)
+	GetUserByIDCitizen(ctx context.Context, idCitizen int) (*domain.UserPublic, error)
 	ValidateAccessToken(ctx context.Context, token string) (*domain.TokenClaims, error)
-	RevokeAllUserTokens(ctx context.Context, userID string) error
+	RevokeAllUserTokens(ctx context.Context, idCitizen int) error
 }
 
 // AuthService handles the business logic of authentication
@@ -120,7 +120,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 	}
 
 	// Generate token pair
-	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID, user.Email, user.Role)
+	tokenPair, err := s.jwtService.GenerateTokenPair(user.IDCitizen, user.Email, user.Role)
 	if err != nil {
 		s.logger.Error("failed to generate token pair", zap.Error(err))
 		return nil, domainerrors.ErrInternal
@@ -128,7 +128,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 
 	// Store refresh token in Redis
 	refreshTokenData := &domain.RefreshTokenData{
-		UserID:    user.ID,
+		IDCitizen: user.IDCitizen,
 		Email:     user.Email,
 		IssuedAt:  time.Now(),
 		ExpiresAt: time.Now().Add(s.jwtService.refreshTokenDuration),
@@ -168,7 +168,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	}
 
 	if blacklisted {
-		s.logger.Warn("refresh token is blacklisted", zap.String("user_id", claims.UserID))
+		s.logger.Warn("refresh token is blacklisted", zap.Int("id_citizen", claims.IDCitizen))
 		return nil, domainerrors.ErrTokenRevoked
 	}
 
@@ -180,7 +180,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	}
 
 	// Generate new token pair
-	tokenPair, err := s.jwtService.GenerateTokenPair(claims.UserID, claims.Email, claims.Role)
+	tokenPair, err := s.jwtService.GenerateTokenPair(claims.IDCitizen, claims.Email, claims.Role)
 	if err != nil {
 		s.logger.Error("failed to generate new token pair", zap.Error(err))
 		return nil, domainerrors.ErrInternal
@@ -193,7 +193,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 
 	// Store new refresh token
 	refreshTokenData := &domain.RefreshTokenData{
-		UserID:    claims.UserID,
+		IDCitizen: claims.IDCitizen,
 		Email:     claims.Email,
 		IssuedAt:  time.Now(),
 		ExpiresAt: time.Now().Add(s.jwtService.refreshTokenDuration),
@@ -209,7 +209,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 		s.logger.Error("failed to store new refresh token", zap.Error(err))
 	}
 
-	s.logger.Info("token refreshed successfully", zap.String("user_id", claims.UserID))
+	s.logger.Info("token refreshed successfully", zap.Int("id_citizen", claims.IDCitizen))
 	return tokenPair, nil
 }
 
@@ -242,15 +242,15 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 		}
 	}
 
-	s.logger.Info("logout successful", zap.String("user_id", claims.UserID))
+	s.logger.Info("logout successful", zap.Int("id_citizen", claims.IDCitizen))
 	return nil
 }
 
-// GetUserByID retrieves a user by their ID
-func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*domain.UserPublic, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
+// GetUserByIDCitizen retrieves a user by their id_citizen
+func (s *AuthService) GetUserByIDCitizen(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
+	user, err := s.userRepo.GetByIDCitizen(ctx, idCitizen)
 	if err != nil {
-		s.logger.Error("failed to get user", zap.Error(err), zap.String("user_id", userID))
+		s.logger.Error("failed to get user", zap.Error(err), zap.Int("id_citizen", idCitizen))
 		return nil, err
 	}
 
@@ -280,14 +280,14 @@ func (s *AuthService) ValidateAccessToken(ctx context.Context, token string) (*d
 }
 
 // RevokeAllUserTokens revokes all tokens of a user
-func (s *AuthService) RevokeAllUserTokens(ctx context.Context, userID string) error {
-	s.logger.Info("revoking all user tokens", zap.String("user_id", userID))
+func (s *AuthService) RevokeAllUserTokens(ctx context.Context, idCitizen int) error {
+	s.logger.Info("revoking all user tokens", zap.Int("id_citizen", idCitizen))
 
-	if err := s.tokenRepo.DeleteUserTokens(ctx, userID); err != nil {
-		s.logger.Error("failed to revoke user tokens", zap.Error(err), zap.String("user_id", userID))
+	if err := s.tokenRepo.DeleteUserTokens(ctx, idCitizen); err != nil {
+		s.logger.Error("failed to revoke user tokens", zap.Error(err), zap.Int("id_citizen", idCitizen))
 		return fmt.Errorf("failed to revoke tokens: %w", err)
 	}
 
-	s.logger.Info("all user tokens revoked successfully", zap.String("user_id", userID))
+	s.logger.Info("all user tokens revoked successfully", zap.Int("id_citizen", idCitizen))
 	return nil
 }

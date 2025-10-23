@@ -102,13 +102,13 @@ func TestAuthenticate_MissingHeader(t *testing.T) {
 }
 
 func TestGetUserFromContext(t *testing.T) {
-	claims := &domain.TokenClaims{UserID: "u1", Email: "e@e.com"}
+	claims := &domain.TokenClaims{IDCitizen: 1, Email: "e@e.com"}
 	ctx := context.WithValue(context.Background(), middleware.UserContextKey, claims)
 	got, ok := middleware.GetUserFromContext(ctx)
 	if !ok {
 		t.Fatal("expected claims in context")
 	}
-	if got.UserID != "u1" {
-		t.Fatalf("unexpected user id %s", got.UserID)
+	if got.IDCitizen != 1 {
+		t.Fatalf("unexpected id_citizen %d", got.IDCitizen)
 	}
 }

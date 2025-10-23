@@ -76,7 +76,7 @@ type MockTokenRepository struct {
 	DeleteRefreshTokenFunc func(ctx context.Context, token string) error
 	BlacklistTokenFunc     func(ctx context.Context, token string, ttl time.Duration) error
 	IsTokenBlacklistedFunc func(ctx context.Context, token string) (bool, error)
-	DeleteUserTokensFunc   func(ctx context.Context, userID string) error
+	DeleteUserTokensFunc   func(ctx context.Context, idCitizen int) error
 }
 
 func (m *MockTokenRepository) StoreRefreshToken(ctx context.Context, token string, data *domain.RefreshTokenData, ttl time.Duration) error {
@@ -114,9 +114,9 @@ func (m *MockTokenRepository) IsTokenBlacklisted(ctx context.Context, token stri
 	return false, nil
 }
 
-func (m *MockTokenRepository) DeleteUserTokens(ctx context.Context, userID string) error {
+func (m *MockTokenRepository) DeleteUserTokens(ctx context.Context, idCitizen int) error {
 	if m.DeleteUserTokensFunc != nil {
-		return m.DeleteUserTokensFunc(ctx, userID)
+		return m.DeleteUserTokensFunc(ctx, idCitizen)
 	}
 	return nil
 }

@@ -33,9 +33,9 @@ func GetMe(h *shared.AuthHandler) nethttp.HandlerFunc {
 		}
 
 		// Get complete user
-		user, err := h.AuthService.GetUserByID(r.Context(), claims.UserID)
+		user, err := h.AuthService.GetUserByIDCitizen(r.Context(), claims.IDCitizen)
 		if err != nil {
-			h.Logger.Error("failed to get user", zap.Error(err), zap.String("user_id", claims.UserID))
+			h.Logger.Error("failed to get user", zap.Error(err), zap.Int("id_citizen", claims.IDCitizen))
 			httperrors.RespondWithDomainError(w, err)
 			return
 		}

@@ -16,28 +16,28 @@ func TestJWTService_GenerateAccessToken(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		userID  string
+		idCitizen  int
 		email   string
 		role    domain.Role
 		wantErr bool
 	}{
 		{
 			name:    "valid token generation",
-			userID:  "user-123",
+		idCitizen: 123,
 			email:   "test@example.com",
 			role:    domain.RoleUser,
 			wantErr: false,
 		},
 		{
 			name:    "empty user id",
-			userID:  "",
+		idCitizen: 0,
 			email:   "test@example.com",
 			role:    domain.RoleUser,
 			wantErr: false, // Should still generate token
 		},
 		{
 			name:    "admin role",
-			userID:  "admin-123",
+		idCitizen: 999,
 			email:   "admin@example.com",
 			role:    domain.RoleAdmin,
 			wantErr: false,
@@ -46,7 +46,7 @@ func TestJWTService_GenerateAccessToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := jwtService.GenerateAccessToken(tt.userID, tt.email, tt.role)
+		token, err := jwtService.GenerateAccessToken(tt.idCitizen, tt.email, tt.role)
 
 			if tt.wantErr && err == nil {
 				t.Errorf("GenerateAccessToken() expected error but got none")
@@ -69,7 +69,7 @@ func TestJWTService_GenerateRefreshToken(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
-	token, err := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
+	token, err := jwtService.GenerateRefreshToken(123, "test@example.com", domain.RoleUser)
 
 	if err != nil {
 		t.Errorf("GenerateRefreshToken() unexpected error: %v", err)
@@ -84,7 +84,7 @@ func TestJWTService_GenerateTokenPair(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
-	tokenPair, err := jwtService.GenerateTokenPair("user-123", "test@example.com", domain.RoleUser)
+	tokenPair, err := jwtService.GenerateTokenPair(123, "test@example.com", domain.RoleUser)
 
 	if err != nil {
 		t.Errorf("GenerateTokenPair() unexpected error: %v", err)
@@ -117,7 +117,7 @@ func TestJWTService_ValidateToken(t *testing.T) {
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
 	// Generate a valid token
-	validToken, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
+	validToken, _ := jwtService.GenerateAccessToken(123, "test@example.com", domain.RoleUser)
 
 	tests := []struct {
 		name    string
@@ -167,8 +167,8 @@ func TestJWTService_ValidateToken(t *testing.T) {
 				return
 			}
 
-			if claims.UserID != "user-123" {
-				t.Errorf("ValidateToken() UserID = %v, want %v", claims.UserID, "user-123")
+			if claims.IDCitizen != 123 {
+				t.Errorf("ValidateToken() IDCitizen = %v, want %v", claims.IDCitizen, 123)
 			}
 
 			if claims.Email != "test@example.com" {
@@ -186,8 +186,8 @@ func TestJWTService_ValidateAccessToken(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
-	accessToken, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
-	refreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
+	accessToken, _ := jwtService.GenerateAccessToken(123, "test@example.com", domain.RoleUser)
+	refreshToken, _ := jwtService.GenerateRefreshToken(123, "test@example.com", domain.RoleUser)
 
 	tests := []struct {
 		name    string
@@ -238,8 +238,8 @@ func TestJWTService_ValidateRefreshToken(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
-	accessToken, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
-	refreshToken, _ := jwtService.GenerateRefreshToken("user-123", "test@example.com", domain.RoleUser)
+	accessToken, _ := jwtService.GenerateAccessToken(123, "test@example.com", domain.RoleUser)
+	refreshToken, _ := jwtService.GenerateRefreshToken(123, "test@example.com", domain.RoleUser)
 
 	tests := []struct {
 		name    string
@@ -290,7 +290,7 @@ func TestJWTService_GetTokenExpiration(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
 
-	token, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
+	token, _ := jwtService.GenerateAccessToken(123, "test@example.com", domain.RoleUser)
 
 	expiresAt, err := jwtService.GetTokenExpiration(token)
 
@@ -316,7 +316,7 @@ func TestJWTService_ExpiredToken(t *testing.T) {
 	// Create service with very short expiration
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 1*time.Millisecond, 1*time.Millisecond, logger)
 
-	token, _ := jwtService.GenerateAccessToken("user-123", "test@example.com", domain.RoleUser)
+	token, _ := jwtService.GenerateAccessToken(123, "test@example.com", domain.RoleUser)
 
 	// Wait for token to expire
 	time.Sleep(10 * time.Millisecond)

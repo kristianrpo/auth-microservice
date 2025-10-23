@@ -111,7 +111,7 @@ func createUserTransferredHandler(
 		}
 
 		// Delete user tokens (best effort, don't fail if error)
-		if err := tokenRepo.DeleteUserTokens(ctx, user.ID); err != nil {
+		if err := tokenRepo.DeleteUserTokens(ctx, user.IDCitizen); err != nil {
 			logger.Warn("failed deleting user tokens", zap.String("user_id", user.ID), zap.Error(err))
 		}
 

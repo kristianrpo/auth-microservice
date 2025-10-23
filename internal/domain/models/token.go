@@ -14,15 +14,15 @@ type TokenPair struct {
 
 // TokenClaims representa los claims personalizados del JWT
 type TokenClaims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Role   Role   `json:"role"`
-	Type   string `json:"type"` // "access" o "refresh"
+	IDCitizen int    `json:"id_citizen"`
+	Email     string `json:"email"`
+	Role      Role   `json:"role"`
+	Type      string `json:"type"` // "access" o "refresh"
 }
 
 // RefreshTokenData represents the data stored in Redis for a refresh token
 type RefreshTokenData struct {
-	UserID    string    `json:"user_id"`
+	IDCitizen int       `json:"id_citizen"`
 	Email     string    `json:"email"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiresAt time.Time `json:"expires_at"`

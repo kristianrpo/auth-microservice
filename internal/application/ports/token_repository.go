@@ -25,5 +25,5 @@ type TokenRepository interface {
 	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
 
 	// DeleteUserTokens deletes all refresh tokens of a user
-	DeleteUserTokens(ctx context.Context, userID string) error
+	DeleteUserTokens(ctx context.Context, idCitizen int) error
 }

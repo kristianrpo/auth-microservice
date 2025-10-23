@@ -12,7 +12,7 @@ type AuthServiceInterface interface {
 	Register(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
 	Logout(ctx context.Context, accessToken, refreshToken string) error
-	GetUserByID(ctx context.Context, userID string) (*domain.UserPublic, error)
+	GetUserByIDCitizen(ctx context.Context, idCitizen int) (*domain.UserPublic, error)
 }
 
 // MockAuthService is a mock implementation of AuthService
@@ -21,10 +21,10 @@ type MockAuthService struct {
 	RegisterFunc     func(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error)
 	RefreshTokenFunc func(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
 	LogoutFunc       func(ctx context.Context, accessToken, refreshToken string) error
-	GetUserByIDFunc  func(ctx context.Context, userID string) (*domain.UserPublic, error)
+	GetUserByIDCitizenFunc  func(ctx context.Context, idCitizen int) (*domain.UserPublic, error)
 	// Additional mocked functions to satisfy services.AuthServiceInterface
 	ValidateAccessTokenFunc func(ctx context.Context, token string) (*domain.TokenClaims, error)
-	RevokeAllUserTokensFunc func(ctx context.Context, userID string) error
+	RevokeAllUserTokensFunc func(ctx context.Context, idCitizen int) error
 }
 
 func (m *MockAuthService) Login(ctx context.Context, email, password string) (*domain.TokenPair, error) {
@@ -55,9 +55,9 @@ func (m *MockAuthService) Logout(ctx context.Context, accessToken, refreshToken 
 	return nil
 }
 
-func (m *MockAuthService) GetUserByID(ctx context.Context, userID string) (*domain.UserPublic, error) {
-	if m.GetUserByIDFunc != nil {
-		return m.GetUserByIDFunc(ctx, userID)
+func (m *MockAuthService) GetUserByIDCitizen(ctx context.Context, idCitizen int) (*domain.UserPublic, error) {
+	if m.GetUserByIDCitizenFunc != nil {
+		return m.GetUserByIDCitizenFunc(ctx, idCitizen)
 	}
 	return nil, nil
 }
@@ -69,9 +69,9 @@ func (m *MockAuthService) ValidateAccessToken(ctx context.Context, token string)
 	return nil, nil
 }
 
-func (m *MockAuthService) RevokeAllUserTokens(ctx context.Context, userID string) error {
+func (m *MockAuthService) RevokeAllUserTokens(ctx context.Context, idCitizen int) error {
 	if m.RevokeAllUserTokensFunc != nil {
-		return m.RevokeAllUserTokensFunc(ctx, userID)
+		return m.RevokeAllUserTokensFunc(ctx, idCitizen)
 	}
 	return nil
 }
