@@ -17,11 +17,11 @@ type AuthServiceInterface interface {
 
 // MockAuthService is a mock implementation of AuthService
 type MockAuthService struct {
-	LoginFunc        func(ctx context.Context, email, password string) (*domain.TokenPair, error)
-	RegisterFunc     func(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error)
-	RefreshTokenFunc func(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
-	LogoutFunc       func(ctx context.Context, accessToken, refreshToken string) error
-	GetUserByIDCitizenFunc  func(ctx context.Context, idCitizen int) (*domain.UserPublic, error)
+	LoginFunc              func(ctx context.Context, email, password string) (*domain.TokenPair, error)
+	RegisterFunc           func(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error)
+	RefreshTokenFunc       func(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
+	LogoutFunc             func(ctx context.Context, accessToken, refreshToken string) error
+	GetUserByIDCitizenFunc func(ctx context.Context, idCitizen int) (*domain.UserPublic, error)
 	// Additional mocked functions to satisfy services.AuthServiceInterface
 	ValidateAccessTokenFunc func(ctx context.Context, token string) (*domain.TokenClaims, error)
 	RevokeAllUserTokensFunc func(ctx context.Context, idCitizen int) error
