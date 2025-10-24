@@ -8,8 +8,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
+
+	httpSwagger "github.com/swaggo/http-swagger"
+	docs "github.com/kristianrpo/auth-microservice/docs"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
@@ -31,6 +33,10 @@ func NewRouter(
 ) *mux.Router {
 	router := mux.NewRouter()
 
+	docs.SwaggerInfo.Host = ""
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
 	// Handlers
 	authHandler := shared.NewAuthHandler(authService, logger)
 	oauth2Handler := shared.NewOAuth2Handler(oauth2Service, logger)
@@ -48,6 +54,15 @@ func NewRouter(
 
 	// API v1 routes
 	api := router.PathPrefix("/api/v1").Subrouter()
+
+	// Swagger UI bajo /api/v1/swagger/ y spec relativo ./doc.json
+	// (esto hace que funcione tanto detrás de Ingress como en local)
+	api.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("./doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	))
 
 	// Public routes - Authentication routes
 	api.HandleFunc("/auth/register", auth.Register(authHandler)).Methods(http.MethodPost)
@@ -77,14 +92,6 @@ func NewRouter(
 	adminRoutes.Use(roleMiddleware.RequireAdmin)
 	adminRoutes.HandleFunc("/oauth-clients", admin.CreateOAuthClient(adminOAuthHandler)).Methods(http.MethodPost)
 	adminRoutes.HandleFunc("/oauth-clients", admin.ListOAuthClients(adminOAuthHandler)).Methods(http.MethodGet)
-
-	// Swagger documentation route
-	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
-		httpSwagger.DeepLinking(true),
-		httpSwagger.DocExpansion("none"),
-		httpSwagger.DomID("swagger-ui"),
-	)).Methods(http.MethodGet)
 
 	// Root endpoint route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
