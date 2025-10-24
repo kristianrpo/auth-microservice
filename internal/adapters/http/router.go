@@ -10,8 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	httpSwagger "github.com/swaggo/http-swagger"
 	docs "github.com/kristianrpo/auth-microservice/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/admin"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/auth"
