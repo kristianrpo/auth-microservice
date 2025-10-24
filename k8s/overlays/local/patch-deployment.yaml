@@ -4,7 +4,7 @@ metadata:
   name: auth-service
   namespace: auth
 spec:
-  replicas: 1
+  replicas: 2
   template:
     spec:
       serviceAccountName: auth-sa
