@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,8 +35,12 @@ func NewRouter(
 	router := mux.NewRouter()
 
 	docs.SwaggerInfo.Host = ""
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
+	docs.SwaggerInfo.Schemes = []string{"https", "http"}
+	// BasePath includes API Gateway stage for correct URL generation
+	docs.SwaggerInfo.BasePath = os.Getenv("API_GATEWAY_STAGE")
+	if docs.SwaggerInfo.BasePath == "" {
+		docs.SwaggerInfo.BasePath = "/dev" // Default to dev
+	}
 
 	// Handlers
 	authHandler := shared.NewAuthHandler(authService, logger)
@@ -52,10 +57,10 @@ func NewRouter(
 	router.Use(middleware.LoggingMiddleware(logger))
 	router.Use(middleware.RecoveryMiddleware(logger))
 
-	// API v1 routes
-	api := router.PathPrefix("/api/v1").Subrouter()
+	// API auth routes
+	api := router.PathPrefix("/api/auth").Subrouter()
 
-	// Swagger UI bajo /api/v1/swagger/ y spec relativo ./doc.json
+	// Swagger UI bajo /api/auth/swagger/ y spec relativo ./doc.json
 	// (esto hace que funcione tanto detrás de Ingress como en local)
 	api.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
 		httpSwagger.URL("./doc.json"),

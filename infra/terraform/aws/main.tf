@@ -11,13 +11,20 @@ data "terraform_remote_state" "shared" {
 }
 
 locals {
-  name               = "${var.project}-${var.environment}"
+  name = "${var.project}-${var.environment}"
+  
+  # Recursos compartidos desde el remote state
   cluster_name       = data.terraform_remote_state.shared.outputs.cluster_name
   rabbitmq_url       = data.terraform_remote_state.shared.outputs.rabbitmq_amqp_url
+  
+  # API Gateway outputs from shared infra
+  api_gateway_id     = data.terraform_remote_state.shared.outputs.api_gateway_id
+  api_gateway_arn    = data.terraform_remote_state.shared.outputs.api_gateway_arn
+  vpc_link_id        = data.terraform_remote_state.shared.outputs.api_gateway_vpc_link_id
+  api_gateway_stage  = data.terraform_remote_state.shared.outputs.api_gateway_invoke_url
 
   vpc_id             = data.terraform_remote_state.shared.outputs.vpc_id
   private_subnet_ids = data.terraform_remote_state.shared.outputs.private_subnet_ids
-
   oidc_provider_arn  = data.terraform_remote_state.shared.outputs.oidc_provider_arn
 }
 
@@ -249,7 +256,7 @@ resource "aws_iam_policy" "service" {
   policy      = data.aws_iam_policy_document.service_policy.json
 }
 
-# Usa el módulo IRSA igual que en tu otro micro (ajusta namespace:sa si difiere)
+# IRSA for auth service
 module "irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.39"
@@ -258,7 +265,7 @@ module "irsa" {
   oidc_providers = {
     main = {
       provider_arn               = local.oidc_provider_arn
-      namespace_service_accounts = ["default:app-sa"]
+      namespace_service_accounts = ["auth:auth-sa"]
     }
   }
   role_policy_arns = { service = aws_iam_policy.service.arn }
@@ -291,7 +298,76 @@ resource "aws_iam_role_policy_attachment" "eso_attach" {
 }
 
 # ============================================================================
-# Outputs - recursos de este micro + conveniencia desde shared
+# API GATEWAY INTEGRATION
+# ============================================================================
+# This integrates this microservice's ALB with the shared API Gateway
+
+# Data source: Find the ALB created by AWS Load Balancer Controller
+# The ALB is tagged by the Kubernetes ingress annotations
+# Note: This ALB is created dynamically by the AWS Load Balancer Controller
+# and will be available after the ingress is deployed in Kubernetes
+# 
+# IMPORTANT: If this fails on first deploy, it means ALB doesn't exist yet.
+# The workflow will create ALB first, then run terraform apply again to create API Gateway integration.
+data "aws_lb" "auth_alb" {
+  tags = {
+    Service     = "auth"
+    Environment = "prod"
+  }
+}
+
+# Data source: Get VPC Link to find its security group
+data "aws_apigatewayv2_vpc_link" "api_gateway_vpc_link" {
+  vpc_link_id = local.vpc_link_id
+}
+
+# Security Group Rule: Allow VPC Link to access ALB
+# This is required for API Gateway to reach the ALB through VPC Link
+resource "aws_security_group_rule" "vpc_link_to_alb" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = tolist(data.aws_apigatewayv2_vpc_link.api_gateway_vpc_link.security_group_ids)[0]
+  security_group_id        = tolist(data.aws_lb.auth_alb.security_groups)[0]
+  description              = "Allow API Gateway VPC Link to access ALB"
+}
+
+# Data source: Get the HTTP listener (port 80) of the ALB
+# API Gateway needs the listener ARN, not the DNS name
+data "aws_lb_listener" "auth_alb_http" {
+  load_balancer_arn = data.aws_lb.auth_alb.arn
+  port              = 80
+}
+
+# API Gateway Integration: Connects API Gateway to the ALB via VPC Link
+# Uses the listener ARN - the listener handles all routing
+resource "aws_apigatewayv2_integration" "auth" {
+  api_id           = local.api_gateway_id
+  integration_type = "HTTP_PROXY"
+  
+  connection_type           = "VPC_LINK"
+  connection_id             = local.vpc_link_id
+  integration_method        = "ANY"
+  integration_uri           = data.aws_lb_listener.auth_alb_http.arn
+  payload_format_version    = "1.0"
+  
+  request_parameters = {
+    "overwrite:path" = "$request.path"
+  }
+}
+
+# API Gateway Route: /api/auth/*
+# Routes to the auth microservice via ALB
+resource "aws_apigatewayv2_route" "auth_api" {
+  api_id    = local.api_gateway_id
+  route_key = "ANY /api/auth/{proxy+}"
+  
+  target = "integrations/${aws_apigatewayv2_integration.auth.id}"
+}
+
+# ============================================================================
+# Outputs - Only microservice-specific resources
 # ============================================================================
 output "rds_endpoint"                  { value = aws_db_instance.postgres.address }
 output "redis_primary_endpoint"        { value = aws_elasticache_cluster.redis.cache_nodes[0].address }
@@ -305,10 +381,37 @@ output "rds_security_group_id"         { value = aws_security_group.rds.id }
 output "redis_security_group_id"       { value = aws_security_group.redis.id }
 
 output "irsa_role_arn"                 { value = module.irsa.iam_role_arn }
+output "secretsmanager_secret_name"    { value = aws_secretsmanager_secret.app.name }
 
-# Outputs de shared (conveniencia)
+# RabbitMQ
+output "rabbitmq_amqp_url" { 
+  value     = local.rabbitmq_url
+  sensitive = true
+}
+
+# Outputs from shared infrastructure (for convenience)
 output "cluster_name"                  { value = local.cluster_name }
 output "cluster_endpoint"              { value = data.terraform_remote_state.shared.outputs.cluster_endpoint }
 output "cluster_ca_certificate"        { value = data.terraform_remote_state.shared.outputs.cluster_ca_certificate }
-output "eso_irsa_role_arn"             { value = data.terraform_remote_state.shared.outputs.external_secrets_irsa_role_arn }
 output "aws_lb_controller_role_arn"    { value = data.terraform_remote_state.shared.outputs.aws_load_balancer_controller_irsa_role_arn }
+
+# API Gateway outputs
+output "alb_hostname" {
+  description = "ALB hostname for this microservice"
+  value       = try(data.aws_lb.auth_alb.dns_name, "Pending ALB creation")
+}
+
+output "api_gateway_url" {
+  description = "API Gateway base URL for this microservice"
+  value       = "${local.api_gateway_stage}/api/auth"
+}
+
+output "api_gateway_health_check_url" {
+  description = "Health check URL via API Gateway"
+  value       = "${local.api_gateway_stage}/api/auth/health"
+}
+
+output "api_gateway_swagger_url" {
+  description = "Swagger documentation URL via API Gateway"
+  value       = "${local.api_gateway_stage}/api/auth/swagger/"
+}

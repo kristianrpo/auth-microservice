@@ -133,7 +133,7 @@ Esto iniciará:
 ### Base URL
 
 ```
-http://localhost:8080/api/v1
+http://localhost:8080/api/auth
 ```
 
 ### Autenticación
@@ -141,7 +141,7 @@ http://localhost:8080/api/v1
 #### 1. Registro de Usuario
 
 ```http
-POST /api/v1/auth/register
+POST /api/auth/register
 Content-Type: application/json
 
 {
@@ -165,7 +165,7 @@ Content-Type: application/json
 #### 2. Login
 
 ```http
-POST /api/v1/auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
@@ -187,7 +187,7 @@ Content-Type: application/json
 #### 3. Refresh Token
 
 ```http
-POST /api/v1/auth/refresh
+POST /api/auth/refresh
 Content-Type: application/json
 
 {
@@ -198,7 +198,7 @@ Content-Type: application/json
 #### 4. Logout (Requiere autenticación)
 
 ```http
-POST /api/v1/auth/logout
+POST /api/auth/logout
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
@@ -210,7 +210,7 @@ Content-Type: application/json
 #### 5. Obtener Usuario Actual (Requiere autenticación)
 
 ```http
-GET /api/v1/auth/me
+GET /api/auth/me
 Authorization: Bearer {access_token}
 ```
 
@@ -280,7 +280,7 @@ MIT License - Ver [LICENSE](LICENSE) para más detalles
 
 Estos endpoints están pensados para administración (service-to-service) y requieren credenciales adecuadas o token admin.
 
-- POST /api/v1/admin/oauth/clients
+- POST /api/auth/admin/oauth-clients
   - Crea un nuevo cliente OAuth
   - Body (JSON):
     {
@@ -290,10 +290,10 @@ Estos endpoints están pensados para administración (service-to-service) y requ
     }
   - Respuesta (201): información del cliente (client_id, client_secret solo al crear, scopes, active)
 
-- GET /api/v1/admin/oauth/clients
+- GET /api/auth/admin/oauth-clients
   - Lista los OAuth clients registrados (soporta paginación)
 
-- POST /api/v1/admin/oauth/clients/{client_id}/token
+- POST /api/auth/auth/token
   - Emite un token por client-credentials (uso administrativo)
 
 ### OAuth2 — Client Credentials
@@ -307,18 +307,18 @@ Flujo para auth máquina a máquina.
 
 ### Métricas y monitoring
 
-- GET /api/v1/metrics
+- GET /api/auth/metrics
   - Endpoint compatible con Prometheus que expone métricas de requests, latencias, errores en repositorios y generación de tokens.
 
 ### Health checks (detalles)
 
-- GET /api/v1/health
+- GET /api/auth/health
   - Comprueba liveness y readiness y los dependientes (Postgres, Redis, RabbitMQ si está configurado). Devuelve 200 si todo OK.
 
-- GET /api/v1/health/ready
+- GET /api/auth/health/ready
   - Readiness: pruebas más completas (ping a la DB y cache).
 
-- GET /api/v1/health/live
+- GET /api/auth/health/live
   - Liveness: verificación ligera de que el proceso está arriba.
 
 ### Eventos / Webhooks (RabbitMQ)
@@ -382,5 +382,5 @@ export JWT_SECRET=test-secret-key-at-least-32-chars-long
 go run ./cmd/server
 ```
 
-4. Revisa logs y endpoints en `http://localhost:8080/api/v1`.
+4. Revisa logs y endpoints en `http://localhost:8080/api/auth`.
 
