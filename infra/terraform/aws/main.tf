@@ -26,12 +26,36 @@ locals {
   vpc_id             = data.terraform_remote_state.shared.outputs.vpc_id
   private_subnet_ids = data.terraform_remote_state.shared.outputs.private_subnet_ids
   oidc_provider_arn  = data.terraform_remote_state.shared.outputs.oidc_provider_arn
+  
+  # Get the node security group ID from EKS nodes
+  # Fallback: if we can't get it, the CIDR rule should still work
+  node_security_group_id = try(data.aws_instance.eks_node_sample[0].security_groups[0], null)
 }
 
 # Derivamos el CIDR de la VPC SIN tocar el shared
 data "aws_vpc" "this" {
   id = local.vpc_id
 }
+
+# Data source: Get security group of EKS nodes
+# We'll find it by looking for instances tagged with the cluster name
+data "aws_instances" "eks_nodes" {
+  filter {
+    name   = "tag:kubernetes.io/cluster/${local.cluster_name}"
+    values = ["owned"]
+  }
+  filter {
+    name   = "instance-state-name"
+    values = ["running"]
+  }
+}
+
+# Get the first node instance to extract its security group
+data "aws_instance" "eks_node_sample" {
+  count       = length(data.aws_instances.eks_nodes.ids) > 0 ? 1 : 0
+  instance_id = data.aws_instances.eks_nodes.ids[0]
+}
+
 
 # ============================================================================
 # Recursos del micro: RDS + Redis + Secrets + IAM (barato para dev)
@@ -69,12 +93,24 @@ resource "aws_security_group" "rds" {
   tags        = { Name = "${local.name}-rds-sg" }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "rds_ingress" {
+resource "aws_vpc_security_group_ingress_rule" "rds_ingress_cidr" {
   security_group_id = aws_security_group.rds.id
   cidr_ipv4         = data.aws_vpc.this.cidr_block
   ip_protocol       = "tcp"
   from_port         = 5432
   to_port           = 5432
+}
+
+# Allow traffic from EKS node security group (more specific)
+resource "aws_vpc_security_group_ingress_rule" "rds_ingress_from_nodes" {
+  count = local.node_security_group_id != null ? 1 : 0
+  
+  security_group_id            = aws_security_group.rds.id
+  referenced_security_group_id = local.node_security_group_id
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  description                  = "Allow PostgreSQL from EKS nodes"
 }
 
 resource "aws_vpc_security_group_egress_rule" "rds_egress" {
@@ -90,12 +126,24 @@ resource "aws_security_group" "redis" {
   tags        = { Name = "${local.name}-redis-sg" }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "redis_ingress" {
+resource "aws_vpc_security_group_ingress_rule" "redis_ingress_cidr" {
   security_group_id = aws_security_group.redis.id
   cidr_ipv4         = data.aws_vpc.this.cidr_block
   ip_protocol       = "tcp"
   from_port         = 6379
   to_port           = 6379
+}
+
+# Allow traffic from EKS node security group (more specific)
+resource "aws_vpc_security_group_ingress_rule" "redis_ingress_from_nodes" {
+  count = local.node_security_group_id != null ? 1 : 0
+  
+  security_group_id            = aws_security_group.redis.id
+  referenced_security_group_id = local.node_security_group_id
+  ip_protocol                  = "tcp"
+  from_port                    = 6379
+  to_port                      = 6379
+  description                  = "Allow Redis from EKS nodes"
 }
 
 resource "aws_vpc_security_group_egress_rule" "redis_egress" {

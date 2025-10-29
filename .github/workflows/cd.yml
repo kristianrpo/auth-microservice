@@ -161,6 +161,14 @@ jobs:
           terraform apply -auto-approve -input=false \
             -var "tf_backend_bucket=$TF_BACKEND_BUCKET" \
             -target random_id.suffix \
+            -target data.aws_instances.eks_nodes \
+            -target data.aws_instance.eks_node_sample \
+            -target aws_security_group.rds \
+            -target aws_vpc_security_group_ingress_rule.rds_ingress_cidr \
+            -target aws_vpc_security_group_ingress_rule.rds_ingress_from_nodes \
+            -target aws_security_group.redis \
+            -target aws_vpc_security_group_ingress_rule.redis_ingress_cidr \
+            -target aws_vpc_security_group_ingress_rule.redis_ingress_from_nodes \
             -target aws_secretsmanager_secret.app \
             -target aws_secretsmanager_secret.rds_credentials \
             -target aws_secretsmanager_secret_version.rds_credentials_initial \
