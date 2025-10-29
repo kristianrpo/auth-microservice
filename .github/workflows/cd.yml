@@ -173,6 +173,9 @@ jobs:
             -target aws_elasticache_cluster.redis \
             -target data.aws_iam_policy_document.service_policy \
             -target aws_iam_policy.service \
+            -target data.aws_iam_policy_document.external_secrets \
+            -target aws_iam_policy.external_secrets \
+            -target aws_iam_role_policy_attachment.eso_attach \
             -target module.irsa
 
   k8s-apply:
