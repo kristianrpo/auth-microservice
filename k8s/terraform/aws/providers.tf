@@ -1,7 +1,9 @@
+# Provider AWS para datasources (token/endpoint/CA)
 provider "aws" {
   region = var.aws_region
 }
 
+# Datasources EKS (permiten obtener endpoint/CA y token)
 data "aws_eks_cluster" "this" {
   count = var.cluster_name == null ? 0 : 1
   name  = var.cluster_name
@@ -23,14 +25,4 @@ provider "kubernetes" {
   host                   = local.effective_cluster_endpoint
   cluster_ca_certificate = base64decode(local.effective_cluster_ca_data)
   token                  = try(data.aws_eks_cluster_auth.this[0].token, null)
-}
-
-provider "helm" {
-  alias = "eks"
-
-  kubernetes = {
-    host                   = local.effective_cluster_endpoint
-    cluster_ca_certificate = base64decode(local.effective_cluster_ca_data)
-    token                  = try(data.aws_eks_cluster_auth.this[0].token, null)
-  }
 }

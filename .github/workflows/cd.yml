@@ -1,0 +1,587 @@
+name: Auth Microservice CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+  TF_BACKEND_KEY: auth/infra/terraform/aws/terraform.tfstate
+  TF_BACKEND_REGION: ${{ secrets.AWS_REGION }}
+  TF_BACKEND_DDB_TABLE: ${{ secrets.TF_BACKEND_DDB_TABLE }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/auth-microservice
+          tags: |
+            type=sha,prefix=main-
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Image digest
+        run: echo ${{ steps.meta.outputs.digest }}
+
+  sonar-tracking:
+    name: SonarCloud Tracking (Main Branch)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          go mod tidy
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Run golangci-lint
+        run: |
+          golangci-lint run --output.checkstyle.path=golangci-lint-report.xml || true
+
+      - name: Run Tests with Coverage
+        run: |
+          echo "Running unit tests..."
+          go test ./internal/.../tests/... -v
+          
+          echo "Generating coverage report..."
+          go test -coverpkg=./internal/... ./internal/.../tests -coverprofile=coverage.out -covermode=atomic
+          
+          echo "Coverage Summary:"
+          go tool cover -func=coverage.out | tail -1
+
+      - name: SonarCloud Scan (Main Branch)
+        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8 # v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.branch.name=main
+
+  infra-apply:
+    name: Provision Microservice AWS Resources (Terraform) - Phase 1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init (infra - remote state)
+        working-directory: infra/terraform/aws
+        run: |
+          terraform init -input=false -upgrade \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=$TF_BACKEND_KEY" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Validate (infra)
+        working-directory: infra/terraform/aws
+        run: terraform validate
+
+      - name: Clean up scheduled-for-deletion secrets
+        run: |
+          # List all secrets with "auth" in the name
+          echo "Checking for secrets scheduled for deletion..."
+          aws secretsmanager list-secrets --region ${{ secrets.AWS_REGION }} \
+            --filters Key=name,Values=auth --output json | \
+            jq -r '.SecretList[] | select(.DeletedDate != null) | .ARN' | \
+            while read -r secret_arn; do
+              if [ -n "$secret_arn" ]; then
+                echo "Force deleting secret: $secret_arn"
+                aws secretsmanager delete-secret --secret-id "$secret_arn" \
+                  --region ${{ secrets.AWS_REGION }} \
+                  --force-delete-without-recovery || true
+              fi
+            done
+          # Wait longer for AWS to process the deletion
+          echo "Waiting 30 seconds for AWS to process..."
+          sleep 30
+
+      - name: Terraform Apply (microservice resources - without ALB)
+        working-directory: infra/terraform/aws
+        run: |
+          # Apply only resources that don't depend on ALB
+          # ALB will be created later when ingress is deployed in app-deploy step
+          terraform apply -auto-approve -input=false \
+            -var "tf_backend_bucket=$TF_BACKEND_BUCKET" \
+            -target random_id.suffix \
+            -target aws_secretsmanager_secret.app \
+            -target aws_secretsmanager_secret.rds_credentials \
+            -target aws_secretsmanager_secret.redis_auth \
+            -target aws_secretsmanager_secret.app_connections \
+            -target aws_db_instance.postgres \
+            -target aws_elasticache_cluster.redis \
+            -target data.aws_iam_policy_document.service_policy \
+            -target aws_iam_policy.service \
+            -target module.irsa
+
+  k8s-apply:
+    name: Deploy Monitoring Config (Dashboards & Alerts) - Phase 2
+    runs-on: ubuntu-latest
+    needs: [infra-apply]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Install kubectl
+        run: |
+          KUBECTL_VERSION=$(curl -sL https://dl.k8s.io/release/stable.txt)
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+
+      - name: Terraform Init (infra dir to read outputs)
+        working-directory: infra/terraform/aws
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=$TF_BACKEND_KEY" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true"
+
+      - name: Read infra outputs (EKS cluster info from shared infra)
+        id: infra_outputs
+        run: |
+          echo "CLUSTER_NAME=$(terraform -chdir=infra/terraform/aws output -raw cluster_name)" >> $GITHUB_OUTPUT
+          echo "CLUSTER_ENDPOINT=$(terraform -chdir=infra/terraform/aws output -raw cluster_endpoint)" >> $GITHUB_OUTPUT
+          echo "CLUSTER_CA=$(terraform -chdir=infra/terraform/aws output -raw cluster_ca_certificate)" >> $GITHUB_OUTPUT
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ steps.infra_outputs.outputs.CLUSTER_NAME }} \
+            --region ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Init (k8s - remote state)
+        working-directory: k8s/terraform/aws
+        run: |
+          terraform init -input=false -upgrade \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=auth/k8s/terraform/aws/terraform.tfstate" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true"
+
+      - name: Import existing K8s/Helm resources into state (idempotency)
+        working-directory: k8s/terraform/aws
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_cluster_name: ${{ steps.infra_outputs.outputs.CLUSTER_NAME }}
+          TF_VAR_cluster_endpoint: ${{ steps.infra_outputs.outputs.CLUSTER_ENDPOINT }}
+          TF_VAR_cluster_ca_certificate: ${{ steps.infra_outputs.outputs.CLUSTER_CA }}
+        run: |
+          set -euo pipefail
+          
+          echo "Checking and managing existing resources..."
+          
+          # Primero intentar importar, si falla (recurso no en state pero existe), eliminarlo
+          
+          # ConfigMap
+          if terraform state list | grep -q "kubernetes_config_map.grafana_dashboard"; then
+            echo "✓ ConfigMap already in state"
+          else
+            echo "Attempting to import ConfigMap..."
+            if terraform import -input=false -no-color kubernetes_config_map.grafana_dashboard monitoring/auth-service-dashboard 2>&1 | grep -q "already managed"; then
+              echo "ConfigMap managed by Terraform, continuing..."
+            elif kubectl get configmap auth-service-dashboard -n monitoring &>/dev/null; then
+              echo "ConfigMap exists but not in state, deleting to recreate..."
+              kubectl delete configmap auth-service-dashboard -n monitoring || true
+            else
+              echo "ConfigMap not found, will be created"
+            fi
+          fi
+          
+          # PrometheusRule
+          if terraform state list | grep -q "kubernetes_manifest.prometheus_rule"; then
+            echo "✓ PrometheusRule already in state"
+          else
+            echo "PrometheusRule not in state, checking if it exists in cluster..."
+            if kubectl get prometheusrule auth-service-alerts -n monitoring &>/dev/null; then
+              echo "PrometheusRule exists in cluster but not in state, deleting to recreate..."
+              kubectl delete prometheusrule auth-service-alerts -n monitoring || true
+              echo "Waiting 5 seconds for resource deletion..."
+              sleep 5
+            else
+              echo "PrometheusRule not found, will be created"
+            fi
+          fi
+
+      - name: Terraform Validate (k8s)
+        working-directory: k8s/terraform/aws
+        run: terraform validate
+
+      - name: Terraform Apply (monitoring stack)
+        working-directory: k8s/terraform/aws
+        env:
+          TF_LOG: INFO
+        run: |
+          terraform apply -auto-approve -input=false \
+            -var "aws_region=${{ secrets.AWS_REGION }}" \
+            -var "cluster_name=${{ steps.infra_outputs.outputs.CLUSTER_NAME }}" \
+            -var "cluster_endpoint=${{ steps.infra_outputs.outputs.CLUSTER_ENDPOINT }}" \
+            -var "cluster_ca_certificate=${{ steps.infra_outputs.outputs.CLUSTER_CA }}"
+
+  app-deploy:
+    name: Deploy Application to EKS (kubectl/kustomize) - Phase 3
+    runs-on: ubuntu-latest
+    needs: [build-and-push, infra-apply, k8s-apply]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubectl
+        run: |
+          KUBECTL_VERSION=$(curl -sL https://dl.k8s.io/release/stable.txt)
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup Terraform (to read outputs from remote state)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init (infra dir to read outputs)
+        working-directory: infra/terraform/aws
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=$TF_BACKEND_KEY" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true"
+
+      - name: Update kubeconfig (connect kubectl to EKS)
+        run: |
+          CLUSTER_NAME=$(terraform -chdir=infra/terraform/aws output -raw cluster_name)
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region ${{ secrets.AWS_REGION }}
+
+      - name: Prepare AWS Secrets for app
+        env:
+          TF_DIR: infra/terraform/aws
+        run: |
+          SECRET_NAME=$(terraform -chdir=$TF_DIR output -raw secretsmanager_secret_name)
+          RABBIT_URL=$(terraform -chdir=$TF_DIR output -raw rabbitmq_amqp_url)
+          RDS_ENDPOINT=$(terraform -chdir=$TF_DIR output -raw rds_endpoint)
+          REDIS_ENDPOINT=$(terraform -chdir=$TF_DIR output -raw redis_primary_endpoint)
+          
+          # Get RDS credentials from Secrets Manager
+          RDS_SECRET_ARN=$(terraform -chdir=$TF_DIR output -raw rds_secret_arn)
+          RDS_CREDS=$(aws secretsmanager get-secret-value --secret-id "$RDS_SECRET_ARN" --query SecretString --output text)
+          DB_USER=$(echo "$RDS_CREDS" | jq -r '.username')
+          DB_PASSWORD=$(echo "$RDS_CREDS" | jq -r '.password')
+          DB_NAME=$(echo "$RDS_CREDS" | jq -r '.dbname')
+          
+          # Get Redis auth token from Secrets Manager
+          REDIS_SECRET_ARN=$(terraform -chdir=$TF_DIR output -raw redis_auth_secret_arn)
+          REDIS_CREDS=$(aws secretsmanager get-secret-value --secret-id "$REDIS_SECRET_ARN" --query SecretString --output text)
+          REDIS_PASSWORD=$(echo "$REDIS_CREDS" | jq -r '.auth_token')
+          
+          # Store all secrets in the app secret
+          aws secretsmanager put-secret-value \
+            --secret-id "$SECRET_NAME" \
+            --secret-string "$(jq -n \
+              --arg host "0.0.0.0" \
+              --arg port "8080" \
+              --arg rabbit "$RABBIT_URL" \
+              --arg consumer_queue "${{ secrets.RABBITMQ_CONSUMER_QUEUE }}" \
+              --arg prefetch "${{ secrets.RABBITMQ_PREFETCH_COUNT || '1' }}" \
+              --arg auto_ack "${{ secrets.RABBITMQ_AUTO_ACK || 'false' }}" \
+              --arg jwt_secret "${{ secrets.JWT_SECRET }}" \
+              --arg jwt_access_duration "${{ secrets.JWT_ACCESS_TOKEN_DURATION || '15m' }}" \
+              --arg jwt_refresh_duration "${{ secrets.JWT_REFRESH_TOKEN_DURATION || '168h' }}" \
+              --arg app_env "${{ secrets.APP_ENV || 'production' }}" \
+              --arg log_level "${{ secrets.LOG_LEVEL || 'info' }}" \
+              --arg db_host "$RDS_ENDPOINT" \
+              --arg db_port "5432" \
+              --arg db_user "$DB_USER" \
+              --arg db_password "$DB_PASSWORD" \
+              --arg db_name "$DB_NAME" \
+              --arg db_ssl "require" \
+              --arg redis_host "$REDIS_ENDPOINT" \
+              --arg redis_port "6379" \
+              --arg redis_password "$REDIS_PASSWORD" \
+              --arg redis_db "0" \
+              '{
+                SERVER_HOST: $host,
+                SERVER_PORT: $port,
+                RABBITMQ_URL: $rabbit,
+                RABBITMQ_CONSUMER_QUEUE: $consumer_queue,
+                RABBITMQ_PREFETCH_COUNT: $prefetch,
+                RABBITMQ_AUTO_ACK: $auto_ack,
+                JWT_SECRET: $jwt_secret,
+                JWT_ACCESS_TOKEN_DURATION: $jwt_access_duration,
+                JWT_REFRESH_TOKEN_DURATION: $jwt_refresh_duration,
+                APP_ENV: $app_env,
+                LOG_LEVEL: $log_level,
+                DB_HOST: $db_host,
+                DB_PORT: $db_port,
+                DB_USER: $db_user,
+                DB_PASSWORD: $db_password,
+                DB_NAME: $db_name,
+                DB_SSL_MODE: $db_ssl,
+                REDIS_HOST: $redis_host,
+                REDIS_PORT: $redis_port,
+                REDIS_PASSWORD: $redis_password,
+                REDIS_DB: $redis_db
+              }')" || true
+
+      - name: Render K8s templates with infra outputs
+        env:
+          TF_DIR: infra/terraform/aws
+        run: |
+          set -euo pipefail
+          SECRET_NAME=$(terraform -chdir=$TF_DIR output -raw secretsmanager_secret_name)
+          REGION='${{ secrets.AWS_REGION }}'
+          IRSA_ROLE=$(terraform -chdir=$TF_DIR output -raw irsa_role_arn)
+          # Sustituir placeholders en External Secrets
+          sed -i "s|__AWS_REGION__|$REGION|g" k8s/overlays/prod/externalsecrets.yaml
+          sed -i "s|__AWS_SECRET_NAME__|$SECRET_NAME|g" k8s/overlays/prod/externalsecrets.yaml
+          # Sustituir placeholder de IRSA role en ServiceAccount
+          sed -i "s|IRSA_ROLE_ARN|$IRSA_ROLE|g" k8s/base/service-account.yaml
+          
+          # Debug: Ver los valores sustituidos
+          echo "=== Values used ==="
+          echo "SECRET_NAME: $SECRET_NAME"
+          echo "REGION: $REGION"
+          echo "IRSA_ROLE: $IRSA_ROLE"
+          echo "=== Checking rendered External Secret ==="
+          grep -A 2 "__AWS_" k8s/overlays/prod/externalsecrets.yaml || echo "All placeholders replaced successfully"
+
+      - name: Verify External Secrets Operator is installed
+        run: |
+          echo "=== Checking External Secrets Operator ==="
+          kubectl get pods -n external-secrets || echo "External Secrets namespace not found"
+          echo ""
+          echo "=== Checking External Secrets Operator logs ==="
+          kubectl logs -n external-secrets -l app.kubernetes.io/name=external-secrets --tail=50 || echo "Cannot get logs"
+          
+      - name: Delete old ExternalSecret if exists
+        run: |
+          echo "=== Deleting old ExternalSecret ==="
+          kubectl -n auth delete externalsecret auth-secrets --ignore-not-found=true
+          sleep 5
+          echo "Old ExternalSecret deleted"
+          
+      - name: Deploy application
+        run: |
+          kubectl apply -k k8s/overlays/prod/
+          
+      - name: Force rolling update (to pick up new image)
+        run: |
+          echo "Triggering rolling update to ensure new image is used..."
+          kubectl rollout restart deployment/auth-service -n auth
+          
+      - name: Check External Secret status
+        run: |
+          echo "=== Checking ExternalSecret status ==="
+          kubectl -n auth get externalsecret auth-secrets -o yaml || echo "ExternalSecret not found"
+          echo ""
+          echo "=== Checking ExternalSecret events ==="
+          kubectl -n auth describe externalsecret auth-secrets || true
+          
+      - name: Wait for External Secrets to create secret
+        run: |
+          echo "Waiting for ExternalSecret to create auth-secrets..."
+          for i in {1..12}; do
+            if kubectl -n auth get secret auth-secrets &>/dev/null; then
+              echo "Secret created successfully!"
+              kubectl -n auth get secret auth-secrets
+              break
+            fi
+            echo "Waiting... (attempt $i/12)"
+            sleep 5
+          done
+          
+          # If still not created, show ExternalSecret status
+          if ! kubectl -n auth get secret auth-secrets &>/dev/null; then
+            echo "ERROR: Secret still not created after 60 seconds"
+            echo "=== ExternalSecret status ==="
+            kubectl -n auth get externalsecret auth-secrets -o yaml
+            exit 1
+          fi
+          
+      - name: Check deployment status and debug
+        run: |
+          echo "=== Checking deployment status ==="
+          kubectl -n auth get deploy auth-service -o yaml
+          echo ""
+          echo "=== Checking pod status ==="
+          kubectl -n auth get pods -l app=auth-service
+          echo ""
+          echo "=== Checking pod logs (if any pods exist) ==="
+          kubectl -n auth logs -l app=auth-service --tail=50 || echo "No logs available yet"
+          echo ""
+          echo "=== Describing deployment ==="
+          kubectl -n auth describe deploy auth-service || true
+          
+      - name: Wait for deployment rollout
+        run: |
+          kubectl -n auth rollout status deploy/auth-service --timeout=180s
+
+      - name: Wait for ALB to be provisioned
+        run: |
+          echo "Waiting for ALB to get hostname assigned..."
+          for i in {1..30}; do
+            ALB_HOSTNAME=$(kubectl -n auth get ingress auth-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            if [ -n "$ALB_HOSTNAME" ]; then
+              echo "✓ ALB provisioned: $ALB_HOSTNAME"
+              break
+            fi
+            echo "Waiting for ALB... (attempt $i/30)"
+            sleep 10
+          done
+          
+          # Mostrar estado actual del ingress
+          if [ -z "$ALB_HOSTNAME" ]; then
+            echo "ALB still pending after 5 minutes"
+            echo "=== Current Ingress Status ==="
+            kubectl -n auth get ingress auth-ingress
+            echo ""
+            echo "=== Ingress Events ==="
+            kubectl -n auth describe ingress auth-ingress | grep -A 20 "Events:" || true
+          else
+            # ALB exists, now apply API Gateway integration
+            echo ""
+            echo "=== ALB Found: $ALB_HOSTNAME ==="
+            echo "Applying API Gateway integration..."
+            
+            cd infra/terraform/aws
+            terraform init -input=false
+            
+            # Apply ONLY ALB-dependent resources
+            terraform apply -auto-approve -input=false \
+              -target data.aws_lb.auth_alb \
+              -target data.aws_lb_listener.auth_alb_http \
+              -target aws_security_group_rule.vpc_link_to_alb \
+              -target aws_apigatewayv2_integration.auth \
+              -target aws_apigatewayv2_route.auth_api \
+              -var "tf_backend_bucket=$TF_BACKEND_BUCKET"
+            
+            cd ../../..
+          fi
+
+      - name: Display Access Information
+        run: |
+          echo "=== Deployment Summary ==="
+          echo ""
+          echo "API Gateway (Shared Infrastructure):"
+          API_GW_URL=$(terraform -chdir=infra/terraform/aws output -raw api_gateway_url 2>/dev/null || echo "")
+          if [ -n "$API_GW_URL" ]; then
+            echo "  API Gateway Endpoint: $API_GW_URL"
+            HEALTH_URL=$(terraform -chdir=infra/terraform/aws output -raw api_gateway_health_check_url 2>/dev/null || echo "")
+            echo "  Health Check: $HEALTH_URL"
+            echo ""
+            echo " Note: API Gateway routes to microservice ALB via VPC Link"
+          else
+            echo "  Pending... Waiting for API Gateway integration to complete"
+          fi
+          echo ""
+          echo ""
+          echo "Application Load Balancer (Direct Access):"
+          ALB_HOSTNAME=$(kubectl -n auth get ingress auth-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+          if [ -n "$ALB_HOSTNAME" ]; then
+            echo "  Hostname: $ALB_HOSTNAME"
+            echo "  API: http://$ALB_HOSTNAME/api/auth"
+            echo "  Health: http://$ALB_HOSTNAME/api/auth/health"
+            echo "  Swagger: http://$ALB_HOSTNAME/api/auth/swagger/"
+          else
+            echo "  Pending... Waiting for ALB to be provisioned"
+            echo "  This can take 2-5 minutes"
+            kubectl -n auth get ingress auth-ingress -o yaml
+          fi
+          echo ""
+          echo ""
+          echo "Grafana ALB (Shared Infrastructure):"
+          GRAFANA_ALB=$(kubectl -n monitoring get ingress grafana-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+          if [ -n "$GRAFANA_ALB" ]; then
+            echo "  Hostname: $GRAFANA_ALB"
+            echo "  Access: http://$GRAFANA_ALB"
+            echo "  (user: admin, pass: admin)"
+            echo "  Note: Deployed by shared infrastructure"
+          else
+            echo "  Not found (Grafana deployed by shared infrastructure)"
+          fi
+          echo ""
+          echo "Prometheus (internal, shared infrastructure):"
+          echo "  kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090"
+          echo "  Note: Prometheus is deployed by shared infrastructure"
+          echo ""

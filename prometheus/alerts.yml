@@ -1,0 +1,275 @@
+groups:
+  # HTTP/API Alerts
+  - name: http_alerts
+    interval: 30s
+    rules:
+      # High error rate (4xx/5xx)
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(auth_service_http_requests_total{status=~"4..|5.."}[5m]))
+            /
+            sum(rate(auth_service_http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Critical error rate
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            sum(rate(auth_service_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(auth_service_http_requests_total[5m]))
+          ) > 0.10
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical HTTP 5xx error rate"
+          description: "Server error rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Slow requests
+      - alert: SlowRequests
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(auth_service_http_request_duration_seconds_bucket[5m])) by (le, endpoint)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow API requests detected"
+          description: "95th percentile latency is {{ $value }}s on endpoint {{ $labels.endpoint }} (threshold: 2s)"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="auth-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: service
+        annotations:
+          summary: "Auth service is down"
+          description: "The auth microservice has been down for more than 1 minute"
+
+  # Authentication Alerts
+  - name: auth_alerts
+    interval: 30s
+    rules:
+      # High login failure rate
+      - alert: HighLoginFailureRate
+        expr: |
+          (
+            sum(rate(auth_service_login_requests_total{status="failed"}[5m]))
+            /
+            sum(rate(auth_service_login_requests_total[5m]))
+          ) > 0.30
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High login failure rate"
+          description: "Login failure rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+
+      # JWT generation failures
+      - alert: HighJWTGenerationFailures
+        expr: |
+          sum(rate(auth_service_jwt_generation_errors_total[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High JWT generation failure rate"
+          description: "JWT generation failing at {{ $value }} errors/second"
+
+      # Suspicious login activity
+      - alert: SuspiciousLoginActivity
+        expr: |
+          rate(auth_service_login_requests_total[1m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Suspicious login activity detected"
+          description: "High login rate: {{ $value }} logins/second"
+
+      # Token refresh failures
+      - alert: TokenRefreshFailures
+        expr: |
+          (
+            sum(rate(auth_service_refresh_requests_total{status="failed"}[5m]))
+            /
+            sum(rate(auth_service_refresh_requests_total[5m]))
+          ) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High token refresh failure rate"
+          description: "Token refresh failure rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+
+  # Database Alerts (PostgreSQL)
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # High database error rate
+      - alert: HighDatabaseErrorRate
+        expr: |
+          sum(rate(auth_service_database_errors_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database error rate"
+          description: "Database operations failing at {{ $value }} errors/second"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(auth_service_database_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s on {{ $labels.operation }} (threshold: 1s)"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: |
+          sum(rate(auth_service_database_connection_errors_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection issues"
+          description: "Database connection errors at {{ $value }} errors/second"
+
+  # Cache Alerts (Redis)
+  - name: cache_alerts
+    interval: 30s
+    rules:
+      # High Redis error rate
+      - alert: HighRedisErrorRate
+        expr: |
+          sum(rate(auth_service_redis_errors_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High Redis error rate"
+          description: "Redis operations failing at {{ $value }} errors/second"
+
+      # Redis connection issues
+      - alert: RedisConnectionIssues
+        expr: |
+          sum(rate(auth_service_redis_connection_errors_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis connection issues"
+          description: "Redis connection errors at {{ $value }} errors/second"
+
+      # Low cache hit rate
+      - alert: CacheHitRateLow
+        expr: |
+          (
+            sum(rate(auth_service_redis_hits_total[5m]))
+            /
+            sum(rate(auth_service_redis_requests_total[5m]))
+          ) < 0.80
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 80%)"
+
+  # Security Alerts
+  - name: security_alerts
+    interval: 1m
+    rules:
+      # Brute force attempts
+      - alert: BruteForceAttempts
+        expr: |
+          rate(auth_service_login_requests_total{status="failed"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Potential brute force attack detected"
+          description: "High failed login rate: {{ $value }} failed logins/second"
+
+      # Unusual OAuth activity
+      - alert: UnusualOAuthActivity
+        expr: |
+          rate(auth_service_oauth_token_requests_total[5m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Unusual OAuth token activity"
+          description: "High OAuth token request rate: {{ $value }} requests/second"
+
+  # Resource Alerts
+  - name: resource_alerts
+    interval: 30s
+    rules:
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          go_memstats_alloc_bytes / 1024 / 1024 > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High memory usage"
+          description: "Service is using {{ $value }}MB of memory (threshold: 300MB)"
+
+      # Too many goroutines
+      - alert: TooManyGoroutines
+        expr: |
+          go_goroutines > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "Too many active goroutines"
+          description: "Service has {{ $value }} active goroutines (threshold: 300)"
+
+      # High request concurrency
+      - alert: HighRequestConcurrency
+        expr: |
+          auth_service_http_requests_in_flight > 30
+        for: 2m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High concurrent request load"
+          description: "Service is handling {{ $value }} concurrent requests (threshold: 30)"

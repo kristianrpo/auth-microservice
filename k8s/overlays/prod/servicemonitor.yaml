@@ -11,5 +11,5 @@ spec:
       app: auth-service
   endpoints:
     - port: http
-      path: /api/v1/metrics
+      path: /api/auth/metrics
       interval: 15s

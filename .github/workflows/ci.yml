@@ -2,7 +2,7 @@ name: Auth Microservice CI
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
 
 jobs:
   lint:
@@ -89,48 +89,31 @@ jobs:
             test-output.log
             test-summary.txt
 
-  build-and-push:
-    name: Build and Push Docker Image
+  docker-build-validate:
+    name: Docker build (validate, no push)
     runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
+    needs: [lint, unit-tests]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/auth-microservice
-          tags: |
-            type=sha,prefix=main-
-            type=raw,value=latest
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          load: false
+          tags: auth-microservice:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
   sonar:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    needs: [build-and-push]
+    needs: [docker-build-validate]
     steps:
       - uses: actions/checkout@v4
         with:

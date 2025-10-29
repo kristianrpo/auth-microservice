@@ -7,6 +7,13 @@ resources:
   - hpa.yaml
   - ingress.yaml
   - servicemonitor.yaml
+
+patches:
+  - path: service-patch.yaml
+    target:
+      kind: Service
+      name: auth-service
+
 images:
   - name: REPOSITORY/auth-service
     newName: kristianrpo30/auth-microservice
