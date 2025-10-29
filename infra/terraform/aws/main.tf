@@ -186,16 +186,6 @@ resource "aws_elasticache_subnet_group" "redis" {
   subnet_ids = local.private_subnet_ids
 }
 
-resource "aws_elasticache_parameter_group" "redis" {
-  name   = "${local.name}-redis-params"
-  family = "redis7"
-
-  parameter {
-    name  = "timeout"
-    value = "0"
-  }
-}
-
 resource "aws_secretsmanager_secret" "redis_auth" {
   name        = "${local.name}/redis/auth-${random_id.suffix.hex}"
   description = "Redis AUTH token for ${local.name}"
@@ -210,6 +200,7 @@ resource "aws_secretsmanager_secret_version" "redis_auth" {
 resource "aws_elasticache_cluster" "redis" {
   cluster_id           = "${local.name}-redis"
   engine               = "redis"
+  engine_version       = "6.x"
   node_type            = "cache.t3.micro"
   num_cache_nodes      = 1
   parameter_group_name = "default.redis6.x"
