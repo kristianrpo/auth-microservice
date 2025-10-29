@@ -29,7 +29,7 @@ locals {
   
   # Get the node security group ID from EKS nodes
   # Fallback: if we can't get it, the CIDR rule should still work
-  node_security_group_id = try(data.aws_instance.eks_node_sample[0].security_groups[0], null)
+  node_security_group_id = try(tolist(data.aws_instance.eks_node_sample[0].vpc_security_group_ids)[0], null)
 }
 
 # Derivamos el CIDR de la VPC SIN tocar el shared
