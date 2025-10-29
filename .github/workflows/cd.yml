@@ -163,8 +163,12 @@ jobs:
             -target random_id.suffix \
             -target aws_secretsmanager_secret.app \
             -target aws_secretsmanager_secret.rds_credentials \
+            -target aws_secretsmanager_secret_version.rds_credentials_initial \
+            -target aws_secretsmanager_secret_version.rds_credentials_with_host \
             -target aws_secretsmanager_secret.redis_auth \
+            -target aws_secretsmanager_secret_version.redis_auth \
             -target aws_secretsmanager_secret.app_connections \
+            -target aws_secretsmanager_secret_version.app_connections \
             -target aws_db_instance.postgres \
             -target aws_elasticache_cluster.redis \
             -target data.aws_iam_policy_document.service_policy \
