@@ -428,6 +428,8 @@ jobs:
           echo "REGION: $REGION"
           echo "IRSA_ROLE: $IRSA_ROLE"
           echo "=== Checking rendered External Secret ==="
+          cat k8s/overlays/prod/externalsecrets.yaml
+          echo "=== Checking for remaining placeholders ==="
           grep -A 2 "__AWS_" k8s/overlays/prod/externalsecrets.yaml || echo "All placeholders replaced successfully"
 
       - name: Verify External Secrets Operator is installed
