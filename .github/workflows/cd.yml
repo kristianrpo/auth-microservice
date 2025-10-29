@@ -502,9 +502,34 @@ jobs:
           echo "=== Describing deployment ==="
           kubectl -n auth describe deploy auth-service || true
           
+      - name: Check deployment status and debug before rollout
+        run: |
+          echo "=== Current Pod Status ==="
+          kubectl -n auth get pods -l app=auth-service
+          echo ""
+          echo "=== Recent Pod Events ==="
+          kubectl -n auth get events --sort-by='.lastTimestamp' | grep auth-service | tail -20 || true
+          echo ""
+          echo "=== Pod Logs (if any pods exist) ==="
+          kubectl -n auth logs -l app=auth-service --tail=50 || echo "No logs available yet"
+          echo ""
+          echo "=== Deployment Status ==="
+          kubectl -n auth get deploy auth-service -o yaml | grep -A 10 "status:" || true
+          
       - name: Wait for deployment rollout
         run: |
-          kubectl -n auth rollout status deploy/auth-service --timeout=180s
+          kubectl -n auth rollout status deploy/auth-service --timeout=300s || {
+            echo "Rollout timeout - getting detailed debug info"
+            echo "=== Pod Status ==="
+            kubectl -n auth get pods -l app=auth-service -o wide
+            echo ""
+            echo "=== Pod Descriptions ==="
+            kubectl -n auth describe pods -l app=auth-service || true
+            echo ""
+            echo "=== Latest Events ==="
+            kubectl -n auth get events --sort-by='.lastTimestamp' | tail -30
+            exit 1
+          }
 
       - name: Wait for ALB to be provisioned
         run: |
