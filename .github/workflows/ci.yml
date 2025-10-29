@@ -2,7 +2,7 @@ name: Auth Microservice CI
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
 
 jobs:
   lint:
