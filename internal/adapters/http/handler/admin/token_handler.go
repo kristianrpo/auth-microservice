@@ -34,7 +34,7 @@ import (
 // @Failure 400 {object} response.ErrorResponse "Invalid request or missing parameters"
 // @Failure 401 {object} response.ErrorResponse "Invalid client credentials"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/token [post]
+// @Router /token [post]
 func Token(h *shared.OAuth2Handler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		var req request.ClientCredentialsRequest

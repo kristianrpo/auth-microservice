@@ -23,7 +23,7 @@ import (
 // @Failure 400 {object} response.ErrorResponse "Invalid request or missing data"
 // @Failure 401 {object} response.ErrorResponse "Invalid credentials"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/login [post]
+// @Router /login [post]
 func Login(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		var req request.LoginRequest

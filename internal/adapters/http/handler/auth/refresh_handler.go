@@ -23,7 +23,7 @@ import (
 // @Failure 400 {object} response.ErrorResponse "Invalid request or missing data"
 // @Failure 401 {object} response.ErrorResponse "Invalid or expired token"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/refresh [post]
+// @Router /refresh [post]
 func Refresh(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		var req request.RefreshTokenRequest

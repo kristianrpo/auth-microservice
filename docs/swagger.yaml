@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /
 definitions:
   domain.Role:
     enum:
@@ -258,217 +258,6 @@ paths:
       summary: Create OAuth2 Client
       tags:
       - Admin - OAuth Clients
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticates a user and returns access and refresh tokens
-      parameters:
-      - description: Login credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/request.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Login successful, tokens generated
-          schema:
-            $ref: '#/definitions/response.TokenResponse'
-        "400":
-          description: Invalid request or missing data
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "401":
-          description: Invalid credentials
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: User login
-      tags:
-      - Authentication
-  /auth/logout:
-    post:
-      consumes:
-      - application/json
-      description: Invalidates user tokens (access and refresh)
-      parameters:
-      - description: Refresh token (optional)
-        in: body
-        name: request
-        schema:
-          $ref: '#/definitions/request.LogoutRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Logout successful
-          schema:
-            $ref: '#/definitions/response.MessageResponse'
-        "400":
-          description: Invalid request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: User logout
-      tags:
-      - Authentication
-  /auth/me:
-    get:
-      consumes:
-      - application/json
-      description: Get the authenticated user's information using the JWT token
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User information
-          schema:
-            $ref: '#/definitions/response.UserResponse'
-        "401":
-          description: Unauthorized or invalid token
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get current user
-      tags:
-      - Authentication
-  /auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Generate a new token pair using a valid refresh token
-      parameters:
-      - description: Refresh token
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/request.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Tokens refreshed successfully
-          schema:
-            $ref: '#/definitions/response.TokenResponse'
-        "400":
-          description: Invalid request or missing data
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "401":
-          description: Invalid or expired token
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Refresh tokens
-      tags:
-      - Authentication
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Create a new user account in the system
-      parameters:
-      - description: User registration data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/request.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: User created successfully
-          schema:
-            $ref: '#/definitions/response.UserResponse'
-        "400":
-          description: Invalid request or missing data
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "409":
-          description: User already exists
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Register a new user
-      tags:
-      - Authentication
-  /auth/token:
-    post:
-      consumes:
-      - application/json
-      - application/x-www-form-urlencoded
-      description: |-
-        Authenticates a client application and returns an access token for service-to-service communication.
-
-        **Test Credentials (use in Swagger):**
-        ```json
-        {
-        "client_id": "123",
-        "client_secret": "123",
-        "grant_type": "client_credentials"
-        }
-        ```
-      parameters:
-      - description: Client Credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/request.ClientCredentialsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Access token generated successfully
-          schema:
-            $ref: '#/definitions/response.ClientCredentialsResponse'
-        "400":
-          description: Invalid request or missing parameters
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "401":
-          description: Invalid client credentials
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: OAuth2 Client Credentials
-      tags:
-      - OAuth2
   /health:
     get:
       consumes:
@@ -527,6 +316,217 @@ paths:
       summary: Readiness check
       tags:
       - Health
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful, tokens generated
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User login
+      tags:
+      - Authentication
+  /logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidates user tokens (access and refresh)
+      parameters:
+      - description: Refresh token (optional)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/request.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            $ref: '#/definitions/response.MessageResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: User logout
+      tags:
+      - Authentication
+  /me:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's information using the JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User information
+          schema:
+            $ref: '#/definitions/response.UserResponse'
+        "401":
+          description: Unauthorized or invalid token
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Authentication
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generate a new token pair using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tokens refreshed successfully
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Refresh tokens
+      tags:
+      - Authentication
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account in the system
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/response.UserResponse'
+        "400":
+          description: Invalid request or missing data
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: User already exists
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /token:
+    post:
+      consumes:
+      - application/json
+      - application/x-www-form-urlencoded
+      description: |-
+        Authenticates a client application and returns an access token for service-to-service communication.
+
+        **Test Credentials (use in Swagger):**
+        ```json
+        {
+        "client_id": "123",
+        "client_secret": "123",
+        "grant_type": "client_credentials"
+        }
+        ```
+      parameters:
+      - description: Client Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ClientCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access token generated successfully
+          schema:
+            $ref: '#/definitions/response.ClientCredentialsResponse'
+        "400":
+          description: Invalid request or missing parameters
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid client credentials
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: OAuth2 Client Credentials
+      tags:
+      - OAuth2
 securityDefinitions:
   BearerAuth:
     description: 'Type "Bearer <token>" in the field. Example: Bearer eyJhbGciOi...'

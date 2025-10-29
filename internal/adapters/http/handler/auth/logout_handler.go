@@ -25,7 +25,7 @@ import (
 // @Failure 400 {object} response.ErrorResponse "Invalid request"
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/logout [post]
+// @Router /logout [post]
 func Logout(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		// Get access token from header

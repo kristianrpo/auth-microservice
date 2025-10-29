@@ -22,7 +22,7 @@ import (
 // @Failure 401 {object} response.ErrorResponse "Unauthorized or invalid token"
 // @Failure 404 {object} response.ErrorResponse "User not found"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/me [get]
+// @Router /me [get]
 func GetMe(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		// Get claims from context

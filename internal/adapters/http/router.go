@@ -71,15 +71,15 @@ func NewRouter(
 	))
 
 	// Public routes - Authentication routes
-	api.HandleFunc("/auth/register", auth.Register(authHandler)).Methods(http.MethodPost)
-	api.HandleFunc("/auth/login", auth.Login(authHandler)).Methods(http.MethodPost)
-	api.HandleFunc("/auth/refresh", auth.Refresh(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/register", auth.Register(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/login", auth.Login(authHandler)).Methods(http.MethodPost)
+	api.HandleFunc("/refresh", auth.Refresh(authHandler)).Methods(http.MethodPost)
 
 	// OAuth2 Client Credentials endpoint
-	api.HandleFunc("/auth/token", admin.Token(oauth2Handler)).Methods(http.MethodPost)
+	api.HandleFunc("/token", admin.Token(oauth2Handler)).Methods(http.MethodPost)
 
 	// Protected routes - Authentication required routes
-	protected := api.PathPrefix("/auth").Subrouter()
+	protected := api.PathPrefix("/").Subrouter()
 	protected.Use(authMiddleware.Authenticate)
 	protected.HandleFunc("/logout", auth.Logout(authHandler)).Methods(http.MethodPost)
 	protected.HandleFunc("/me", auth.GetMe(authHandler)).Methods(http.MethodGet)

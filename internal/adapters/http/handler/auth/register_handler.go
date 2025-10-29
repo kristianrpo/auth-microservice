@@ -23,7 +23,7 @@ import (
 // @Failure 400 {object} response.ErrorResponse "Invalid request or missing data"
 // @Failure 409 {object} response.ErrorResponse "User already exists"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /auth/register [post]
+// @Router /register [post]
 func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		var req request.RegisterRequest
