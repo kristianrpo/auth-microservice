@@ -15,6 +15,6 @@ patches:
       name: auth-service
 
 images:
-  - name: REPOSITORY/auth-service
+  - name: REPOSITORY/auth-microservice
     newName: kristianrpo30/auth-microservice
     newTag: latest
