@@ -37,10 +37,11 @@ func NewRouter(
 	docs.SwaggerInfo.Host = ""
 	docs.SwaggerInfo.Schemes = []string{"https", "http"}
 	// BasePath includes API Gateway stage for correct URL generation
-	docs.SwaggerInfo.BasePath = os.Getenv("API_GATEWAY_STAGE")
-	if docs.SwaggerInfo.BasePath == "" {
-		docs.SwaggerInfo.BasePath = "/dev" // Default to dev
+	stage := os.Getenv("API_GATEWAY_STAGE")
+	if stage == "" {
+		stage = "/dev"
 	}
+	docs.SwaggerInfo.BasePath = stage + "/api/auth"
 
 	// Handlers
 	authHandler := shared.NewAuthHandler(authService, logger)
