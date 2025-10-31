@@ -56,6 +56,7 @@ func NewRouter(
 	// Global middleware
 	router.Use(middleware.CORSMiddleware)
 	router.Use(middleware.LoggingMiddleware(logger))
+	router.Use(middleware.MetricsMiddleware)
 	router.Use(middleware.RecoveryMiddleware(logger))
 
 	// API auth routes

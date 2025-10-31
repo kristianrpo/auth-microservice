@@ -12,6 +12,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/application/ports"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // OAuth2Service handles OAuth2 Client Credentials flow
@@ -74,6 +75,8 @@ func (s *OAuth2Service) ClientCredentials(ctx context.Context, clientID, clientS
 		s.logger.Error("failed to generate access token", zap.Error(err), zap.String("client_id", clientID))
 		return "", 0, fmt.Errorf("failed to generate access token: %w", err)
 	}
+
+	metrics.AddJWTTokensGenerated(1)
 
 	s.logger.Info("client credentials token generated successfully",
 		zap.String("client_id", clientID),

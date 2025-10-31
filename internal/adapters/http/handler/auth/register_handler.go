@@ -10,6 +10,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // Register handles new user registration
@@ -26,6 +27,8 @@ import (
 // @Router /register [post]
 func Register(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		metrics.IncRegisterRequests()
+
 		var req request.RegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			h.Logger.Debug("invalid request body", zap.Error(err))

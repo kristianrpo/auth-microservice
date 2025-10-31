@@ -10,6 +10,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // Refresh handles token renewal
@@ -26,6 +27,8 @@ import (
 // @Router /refresh [post]
 func Refresh(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		metrics.IncRefreshRequests()
+
 		var req request.RefreshTokenRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			h.Logger.Debug("invalid request body", zap.Error(err))

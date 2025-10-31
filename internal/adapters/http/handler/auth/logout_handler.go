@@ -11,6 +11,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // Logout handles user logout
@@ -28,6 +29,8 @@ import (
 // @Router /logout [post]
 func Logout(h *shared.AuthHandler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		metrics.IncLogoutRequests()
+
 		// Get access token from header
 		authHeader := r.Header.Get("Authorization")
 		var accessToken string

@@ -11,6 +11,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/dto/response"
 	httperrors "github.com/kristianrpo/auth-microservice/internal/adapters/http/errors"
 	"github.com/kristianrpo/auth-microservice/internal/adapters/http/handler/shared"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // Token handles OAuth2 Client Credentials flow
@@ -37,6 +38,8 @@ import (
 // @Router /token [post]
 func Token(h *shared.OAuth2Handler) nethttp.HandlerFunc {
 	return func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		metrics.IncOAuthTokenRequests()
+
 		var req request.ClientCredentialsRequest
 
 		// Check Content-Type to handle both JSON and form-urlencoded

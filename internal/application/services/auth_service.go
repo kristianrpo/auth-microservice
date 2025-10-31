@@ -11,6 +11,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/application/ports"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
+	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
 
 // AuthServiceInterface defines the methods of AuthService used by handlers and other consumers.
@@ -126,6 +127,8 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*domai
 		return nil, domainerrors.ErrInternal
 	}
 
+	metrics.AddJWTTokensGenerated(2)
+
 	// Store refresh token in Redis
 	refreshTokenData := &domain.RefreshTokenData{
 		IDCitizen: user.IDCitizen,
@@ -185,6 +188,8 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 		s.logger.Error("failed to generate new token pair", zap.Error(err))
 		return nil, domainerrors.ErrInternal
 	}
+
+	metrics.AddJWTTokensGenerated(2)
 
 	// Delete old refresh token
 	if err := s.tokenRepo.DeleteRefreshToken(ctx, refreshToken); err != nil {
