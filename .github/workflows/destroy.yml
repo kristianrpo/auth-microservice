@@ -1,0 +1,310 @@
+name: Destroy Auth Microservice (EKS + Infra)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe EXACTAMENTE: I UNDERSTAND (para confirmar el destroy)'
+        required: true
+        default: ''
+      delete_state:
+        description: 'Eliminar también los state files del microservicio? (true/false)'
+        required: true
+        default: 'false'
+
+permissions:
+  contents: read
+
+env:
+  TF_BACKEND_BUCKET: ${{ secrets.TF_BACKEND_BUCKET }}
+  TF_BACKEND_KEY: auth/infra/terraform/aws/terraform.tfstate
+  TF_BACKEND_REGION: ${{ secrets.AWS_REGION }}
+  TF_BACKEND_DDB_TABLE: ${{ secrets.TF_BACKEND_DDB_TABLE }}
+
+jobs:
+  destroy:
+    name: Destroy Microservice Resources (NOT Shared Infrastructure)
+    runs-on: ubuntu-latest
+
+    steps:
+      # ========== 1. VERIFICACIÓN ==========
+      - name: Guard rail confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "I UNDERSTAND" ]; then
+            echo "Falta confirmación exacta: I UNDERSTAND"
+            exit 1
+          fi
+          echo "✓ Destruyendo SOLO recursos del microservicio auth"
+          echo "✓ La infraestructura compartida (VPC, EKS, RabbitMQ) NO será destruida"
+
+      - uses: actions/checkout@v4
+
+      # ========== 2. SETUP ==========
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          # kubectl
+          KUBECTL_VERSION=$(curl -sL https://dl.k8s.io/release/stable.txt)
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/kubectl
+          
+          # jq
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      # ========== 3. CONECTAR AL CLUSTER ==========
+      - name: Init Terraform infra
+        working-directory: infra/terraform/aws
+        continue-on-error: true
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=$TF_BACKEND_KEY" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true" || echo "Terraform init falló (estado corrupto o no existe) - continuando..."
+
+      - name: Update kubeconfig
+        id: kubeconfig
+        run: |
+          echo "Obteniendo nombre del cluster desde AWS..."
+          CLUSTER_NAME=$(aws eks list-clusters --region "${{ secrets.AWS_REGION }}" --query 'clusters[0]' --output text)
+          
+          if [ -z "$CLUSTER_NAME" ] || [ "$CLUSTER_NAME" == "None" ]; then
+            echo "No se encontró ningún cluster EKS"
+            exit 1
+          fi
+          
+          echo "Cluster name: $CLUSTER_NAME"
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "${{ secrets.AWS_REGION }}"
+          kubectl get nodes
+
+      # ========== 4. ELIMINAR RECURSOS K8S ==========
+      - name: Delete Kubernetes resources
+        if: steps.kubeconfig.outcome == 'success'
+        run: |
+          echo "=== Eliminando recursos Kubernetes del microservicio ==="
+          
+          kubectl -n auth delete externalsecret auth-secrets --ignore-not-found=true || true
+          
+          kubectl delete -k k8s/overlays/prod/ --ignore-not-found --wait=true || true
+          
+          kubectl delete namespace auth --ignore-not-found --wait=true || true
+          
+          kubectl delete configmap auth-service-dashboard -n monitoring --ignore-not-found || true
+          kubectl delete prometheusrule auth-service-alerts -n monitoring --ignore-not-found || true
+          
+          echo "✓ Recursos de Kubernetes eliminados"
+
+      # ========== 5. LIMPIAR ESTADO DE TERRAFORM K8S (si existe) ==========
+      - name: Clean up k8s Terraform state
+        working-directory: k8s/terraform/aws
+        continue-on-error: true
+        run: |
+          echo "=== Limpiando estado de Terraform k8s ==="
+          terraform init -input=false \
+            -backend-config="bucket=$TF_BACKEND_BUCKET" \
+            -backend-config="key=auth/k8s/terraform/aws/terraform.tfstate" \
+            -backend-config="region=$TF_BACKEND_REGION" \
+            -backend-config="dynamodb_table=$TF_BACKEND_DDB_TABLE" \
+            -backend-config="encrypt=true" 2>&1 || echo "No hay estado de k8s para limpiar"
+          
+          terraform state list 2>/dev/null | while read resource; do
+            if [ -n "$resource" ]; then
+              echo "Eliminando del estado: $resource"
+              terraform state rm "$resource" 2>&1 || true
+            fi
+          done
+
+      # ========== 6. LIMPIAR ESTADO DE RECURSOS PROBLEMÁTICOS ==========
+      - name: Clean up problematic Terraform state
+        working-directory: infra/terraform/aws
+        continue-on-error: true
+        run: |
+          echo "=== Limpiando estado de Terraform con recursos problemáticos ==="
+          
+          RESOURCES=(
+            "module.irsa.aws_iam_role.this[0]"
+            "module.irsa.aws_iam_role_policy_attachment.this[\"service\"]"
+            "aws_iam_role_policy_attachment.eso_attach"
+            "aws_iam_policy.service"
+            "aws_iam_policy.external_secrets"
+            "aws_secretsmanager_secret.app"
+            "aws_secretsmanager_secret.rds_credentials"
+            "aws_secretsmanager_secret.redis_auth"
+            "aws_secretsmanager_secret.app_connections"
+            "aws_db_instance.postgres"
+            "aws_elasticache_cluster.redis"
+            "aws_security_group.rds"
+            "aws_security_group.redis"
+            "aws_db_parameter_group.rds"
+            "aws_db_subnet_group.rds"
+          )
+          
+          for resource in "${RESOURCES[@]}"; do
+            echo "Verificando: $resource"
+            terraform state rm "$resource" 2>&1 | grep -v "No matching instance found" || true
+          done
+          
+          echo "✓ Estado limpiado"
+
+      # ========== 7. TERRAFORM DESTROY INFRA ==========
+      - name: Terraform Destroy microservice resources
+        working-directory: infra/terraform/aws
+        continue-on-error: true
+        run: |
+          echo "=== Destruyendo recursos AWS restantes ==="
+          terraform destroy -auto-approve -input=false \
+            -var "tf_backend_bucket=$TF_BACKEND_BUCKET" 2>&1 || echo "Destroy falló (esperado si hay recursos en conflicto)"
+
+      # ========== 8. ELIMINAR RECURSOS DEL API GATEWAY ==========
+      - name: Clean up API Gateway routes and integrations
+        run: |
+          echo "=== Limpiando recursos de API Gateway ==="
+          
+          API_GATEWAY_ID=$(aws apigatewayv2 get-apis --region ${{ secrets.AWS_REGION }} --query 'Items[0].ApiId' --output text 2>/dev/null || echo "")
+          
+          if [ -n "$API_GATEWAY_ID" ] && [ "$API_GATEWAY_ID" != "None" ]; then
+            echo "API Gateway ID: $API_GATEWAY_ID"
+            ROUTES=$(aws apigatewayv2 get-routes --api-id "$API_GATEWAY_ID" --region ${{ secrets.AWS_REGION }} \
+              --query "Items[?contains(RouteKey, '/api/auth')].{RouteId:RouteId,RouteKey:RouteKey}" \
+              --output json 2>/dev/null || echo "[]")
+            
+            echo "$ROUTES" | jq -r '.[] | .RouteId' | while read route_id; do
+              if [ -n "$route_id" ]; then
+                echo "Eliminando ruta: $route_id"
+                aws apigatewayv2 delete-route --api-id "$API_GATEWAY_ID" --route-id "$route_id" --region ${{ secrets.AWS_REGION }} 2>/dev/null || true
+              fi
+            done
+            
+            INTEGRATIONS=$(aws apigatewayv2 get-integrations --api-id "$API_GATEWAY_ID" --region ${{ secrets.AWS_REGION }} \
+              --output json 2>/dev/null || echo "{}")
+            
+            echo "$INTEGRATIONS" | jq -r '.Items[] | select(.IntegrationUri | contains("app/k8s") or contains("auth") or contains("Auth")) | .IntegrationId' | while read integration_id; do
+              if [ -n "$integration_id" ]; then
+                echo "Eliminando integración: $integration_id"
+                aws apigatewayv2 delete-integration --api-id "$API_GATEWAY_ID" --integration-id "$integration_id" --region ${{ secrets.AWS_REGION }} 2>/dev/null || true
+              fi
+            done
+            
+            echo "✓ Recursos de API Gateway eliminados"
+          else
+            echo "No se pudo obtener API Gateway ID, saltando limpieza de API Gateway"
+          fi
+
+      # ========== 9. LIMPIAR RECURSOS RESIDUALES (ALB, IAM, etc) ==========
+      - name: Clean up residual AWS resources
+        run: |
+          echo "=== Limpiando recursos AWS residuales ==="
+          
+          ALB_ARN=$(aws elbv2 describe-load-balancers --region ${{ secrets.AWS_REGION }} \
+            --query 'LoadBalancers[?contains(DNSName, `auth`) || contains(LoadBalancerName, `auth`)].LoadBalancerArn' \
+            --output text 2>/dev/null || echo "")
+          if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+            echo "Eliminando ALB: $ALB_ARN"
+            aws elbv2 delete-load-balancer --load-balancer-arn "$ALB_ARN" --region ${{ secrets.AWS_REGION }} || true
+          fi
+          
+          IAM_ROLE=$(aws iam list-roles --query 'Roles[?contains(RoleName, `auth`)].RoleName' --output text 2>/dev/null || echo "")
+          if [ -n "$IAM_ROLE" ] && [ "$IAM_ROLE" != "None" ]; then
+            echo "Eliminando IAM Role: $IAM_ROLE"
+            aws iam list-attached-role-policies --role-name "$IAM_ROLE" \
+              --query 'AttachedPolicies[].PolicyArn' --output json | \
+              jq -r '.[]' | \
+              while read policy_arn; do
+                if [ -n "$policy_arn" ] && [ "$policy_arn" != "null" ]; then
+                  echo "Desadjuntando política: $policy_arn"
+                  aws iam detach-role-policy --role-name "$IAM_ROLE" --policy-arn "$policy_arn" || true
+                fi
+              done
+            echo "Eliminando role: $IAM_ROLE"
+            aws iam delete-role --role-name "$IAM_ROLE" || true
+          fi
+          
+          IAM_POLICY_ARN=$(aws iam list-policies --query 'Policies[?contains(PolicyName, `auth`)].Arn' --output text 2>/dev/null || echo "")
+          if [ -n "$IAM_POLICY_ARN" ] && [ "$IAM_POLICY_ARN" != "None" ]; then
+            echo "Eliminando IAM Policy: $IAM_POLICY_ARN"
+            aws iam delete-policy --policy-arn "$IAM_POLICY_ARN" || true
+          fi
+          
+          aws secretsmanager list-secrets --region ${{ secrets.AWS_REGION }} --include-planned-deletion \
+            --filters Key=name,Values=auth --output json | \
+            jq -r '.SecretList[] | select(.Name | contains("auth")) | .ARN' | \
+            while read secret_arn; do
+              if [ -n "$secret_arn" ]; then
+                echo "Eliminando secret: $secret_arn"
+                aws secretsmanager delete-secret --secret-id "$secret_arn" --region ${{ secrets.AWS_REGION }} \
+                  --force-delete-without-recovery || true
+              fi
+            done
+          
+          aws s3api list-buckets --query 'Buckets[?contains(Name, `auth`)].Name' --output text | \
+            while read bucket; do
+              if [ -n "$bucket" ]; then
+                echo "Eliminando S3 bucket: $bucket"
+                aws s3 rb s3://$bucket --force || true
+              fi
+            done
+          
+          aws dynamodb list-tables --query 'TableNames[?contains(@, `auth`)]' --output text | \
+            while read table; do
+              if [ -n "$table" ]; then
+                echo "Eliminando DynamoDB table: $table"
+                aws dynamodb delete-table --table-name "$table" --region ${{ secrets.AWS_REGION }} || true
+                aws dynamodb wait table-not-exists --table-name "$table" --region ${{ secrets.AWS_REGION }} || true
+              fi
+            done
+          
+          if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+            SG_IDS=$(aws elbv2 describe-load-balancers --region ${{ secrets.AWS_REGION }} \
+              --load-balancer-arns "$ALB_ARN" \
+              --query 'LoadBalancers[0].SecurityGroups' \
+              --output text 2>/dev/null || echo "")
+            echo "$SG_IDS" | while read sg_id; do
+              if [ -n "$sg_id" ]; then
+                echo "Verificando Security Group: $sg_id"
+                SG_NAME=$(aws ec2 describe-security-groups --group-ids "$sg_id" --region ${{ secrets.AWS_REGION }} \
+                  --query 'SecurityGroups[0].GroupName' --output text 2>/dev/null || echo "")
+                if [ -n "$SG_NAME" ] && [[ "$SG_NAME" == *"auth"* ]]; then
+                  echo "Eliminando Security Group: $sg_id ($SG_NAME)"
+                  aws ec2 delete-security-group --group-id "$sg_id" --region ${{ secrets.AWS_REGION }} 2>/dev/null || true
+                fi
+              fi
+            done
+          fi
+          
+          echo "✓ Recursos residuales eliminados"
+
+      # ========== 10. LIMPIAR ESTADO DE TERRAFORM COMPLETAMENTE ==========
+      - name: Clean Terraform state completely
+        working-directory: infra/terraform/aws
+        continue-on-error: true
+        run: |
+          echo "=== Limpiando TODO el estado de Terraform ==="
+          terraform state list 2>/dev/null | while read resource; do
+            if [ -n "$resource" ]; then
+              echo "Eliminando del estado: $resource"
+              terraform state rm "$resource" 2>&1 || true
+            fi
+          done
+          echo "✓ Estado de Terraform completamente limpiado"
+
+      # ========== 11. OPCIONAL: ELIMINAR STATE FILES ==========
+      - name: Delete state files (optional)
+        if: ${{ github.event.inputs.delete_state == 'true' }}
+        run: |
+          echo "Eliminando state files del microservicio..."
+          aws s3api delete-object --bucket "$TF_BACKEND_BUCKET" --key "$TF_BACKEND_KEY" || true
+          aws s3api delete-object --bucket "$TF_BACKEND_BUCKET" --key "auth/k8s/terraform/aws/terraform.tfstate" || true
+          echo "✓ State files eliminados (bucket compartido conservado)"
+
