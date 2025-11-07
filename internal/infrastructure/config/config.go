@@ -11,12 +11,13 @@ import (
 
 // Config contains all the application configuration
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	RabbitMQ RabbitMQConfig
-	App      AppConfig
+	Server               ServerConfig
+	Database             DatabaseConfig
+	Redis                RedisConfig
+	JWT                  JWTConfig
+	RabbitMQ             RabbitMQConfig
+	ExternalConnectivity ExternalConnectivityConfig
+	App                  AppConfig
 }
 
 // ServerConfig contains the HTTP server configuration
@@ -66,6 +67,11 @@ type RabbitMQConfig struct {
 	AutoAck       bool
 }
 
+// ExternalConnectivityConfig contains the external-connectivity microservice configuration
+type ExternalConnectivityConfig struct {
+	BaseURL string
+}
+
 // AppConfig contains the general application configuration
 type AppConfig struct {
 	Environment string
@@ -108,6 +114,9 @@ func Load() (*Config, error) {
 			Durable:             true,
 			PrefetchCount:       getEnvAsInt("RABBITMQ_PREFETCH_COUNT", 1),
 			AutoAck:             getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
+		},
+		ExternalConnectivity: ExternalConnectivityConfig{
+			BaseURL: getEnv("EXTERNAL_CONNECTIVITY_URL", "http://external-connectivity-service.external-connectivity.svc.cluster.local:8080"),
 		},
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),

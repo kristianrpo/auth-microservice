@@ -29,12 +29,13 @@ type AuthServiceInterface interface {
 
 // AuthService handles the business logic of authentication
 type AuthService struct {
-	userRepo            ports.UserRepository
-	tokenRepo           ports.TokenRepository
-	jwtService          *JWTService
-	publisher           ports.MessagePublisher
-	userRegisteredQueue string
-	logger              *zap.Logger
+	userRepo                    ports.UserRepository
+	tokenRepo                   ports.TokenRepository
+	jwtService                  *JWTService
+	publisher                   ports.MessagePublisher
+	externalConnectivityClient  ports.ExternalConnectivityClient
+	userRegisteredQueue         string
+	logger                      *zap.Logger
 }
 
 // NewAuthService creates a new instance of AuthService
@@ -43,22 +44,40 @@ func NewAuthService(
 	tokenRepo ports.TokenRepository,
 	jwtService *JWTService,
 	publisher ports.MessagePublisher,
+	externalConnectivityClient ports.ExternalConnectivityClient,
 	userRegisteredQueue string,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		userRepo:            userRepo,
-		tokenRepo:           tokenRepo,
-		jwtService:          jwtService,
-		publisher:           publisher,
-		userRegisteredQueue: userRegisteredQueue,
-		logger:              logger,
+		userRepo:                   userRepo,
+		tokenRepo:                  tokenRepo,
+		jwtService:                 jwtService,
+		publisher:                  publisher,
+		externalConnectivityClient: externalConnectivityClient,
+		userRegisteredQueue:        userRegisteredQueue,
+		logger:                     logger,
 	}
 }
 
 // Register registers a new user
 func (s *AuthService) Register(ctx context.Context, email, password, name string, idCitizen int) (*domain.UserPublic, error) {
 	s.logger.Info("attempting to register user", zap.String("email", email), zap.Int("id_citizen", idCitizen))
+
+	// Check if citizen exists in centralizer via external-connectivity service
+	citizenExists, err := s.externalConnectivityClient.CheckCitizenExists(ctx, idCitizen)
+	if err != nil {
+		s.logger.Error("failed to check citizen in centralizer",
+			zap.Error(err),
+			zap.Int("id_citizen", idCitizen))
+		return nil, domainerrors.ErrInternal
+	}
+
+	if citizenExists {
+		s.logger.Warn("citizen already exists in centralizer, registration not allowed",
+			zap.Int("id_citizen", idCitizen),
+			zap.String("email", email))
+		return nil, domainerrors.ErrCitizenExistsInCentralizer
+	}
 
 	// Verificar si el usuario ya existe
 	exists, err := s.userRepo.Exists(ctx, email)

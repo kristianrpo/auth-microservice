@@ -141,6 +141,19 @@ func (m *MockMessagePublisher) Close() error {
 	return nil
 }
 
+// MockExternalConnectivityClient is a mock implementation of ports.ExternalConnectivityClient
+type MockExternalConnectivityClient struct {
+	CheckCitizenExistsFunc func(ctx context.Context, idCitizen int) (bool, error)
+}
+
+func (m *MockExternalConnectivityClient) CheckCitizenExists(ctx context.Context, idCitizen int) (bool, error) {
+	if m.CheckCitizenExistsFunc != nil {
+		return m.CheckCitizenExistsFunc(ctx, idCitizen)
+	}
+	// Default: citizen does not exist (allow registration)
+	return false, nil
+}
+
 // MockOAuthClientRepository is a mock implementation of ports.OAuthClientRepository
 type MockOAuthClientRepository struct {
 	CreateFunc        func(ctx context.Context, client *domain.OAuthClient) error

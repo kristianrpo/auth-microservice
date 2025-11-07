@@ -91,8 +91,9 @@ func TestAuthService_Register(t *testing.T) {
 			}
 			mockTokenRepo := &MockTokenRepository{}
 			mockPublisher := &MockMessagePublisher{}
+			mockExternalClient := &MockExternalConnectivityClient{}
 			jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
-			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, mockExternalClient, "test.user.registered", logger)
 
 			user, err := authService.Register(context.Background(), tt.email, tt.password, tt.userName, tt.idCitizen)
 
@@ -178,7 +179,7 @@ func TestAuthService_Login(t *testing.T) {
 			mockTokenRepo := &MockTokenRepository{}
 			mockPublisher := &MockMessagePublisher{}
 			jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
-			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 			tokenPair, err := authService.Login(context.Background(), tt.email, tt.password)
 
@@ -279,7 +280,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 				GetRefreshTokenFunc:    tt.getRefreshTokenFunc,
 			}
 			mockPublisher := &MockMessagePublisher{}
-			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 			tokenPair, err := authService.RefreshToken(context.Background(), tt.refreshToken)
 
@@ -339,7 +340,7 @@ func TestAuthService_Logout(t *testing.T) {
 			mockUserRepo := &MockUserRepository{}
 			mockTokenRepo := &MockTokenRepository{}
 			mockPublisher := &MockMessagePublisher{}
-			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 			err := authService.Logout(context.Background(), tt.accessToken, tt.refreshToken)
 
@@ -392,7 +393,7 @@ func TestAuthService_GetUserByID(t *testing.T) {
 			mockTokenRepo := &MockTokenRepository{}
 			mockPublisher := &MockMessagePublisher{}
 			jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
-			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+			authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 			user, err := authService.GetUserByIDCitizen(context.Background(), tt.idCitizen)
 
@@ -432,7 +433,7 @@ func TestAuthService_Register_DuplicateIDCitizen(t *testing.T) {
 	mockTokenRepo := &MockTokenRepository{}
 	mockPublisher := &MockMessagePublisher{}
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
-	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 	_, err := authService.Register(context.Background(), "test@example.com", "password123", "Name", 123)
 	if err == nil {
@@ -461,7 +462,7 @@ func TestAuthService_Register_CreateReturnsAlreadyExists(t *testing.T) {
 	mockTokenRepo := &MockTokenRepository{}
 	mockPublisher := &MockMessagePublisher{}
 	jwtService := services.NewJWTService("test-secret-key-at-least-32-chars-long", 15*time.Minute, 7*24*time.Hour, logger)
-	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, "test.user.registered", logger)
+	authService := services.NewAuthService(mockUserRepo, mockTokenRepo, jwtService, mockPublisher, &MockExternalConnectivityClient{}, "test.user.registered", logger)
 
 	_, err := authService.Register(context.Background(), "test@example.com", "password123", "Name", 123)
 	if err == nil {

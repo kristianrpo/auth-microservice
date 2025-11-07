@@ -16,6 +16,7 @@ import (
 	"github.com/kristianrpo/auth-microservice/internal/application/ports"
 	"github.com/kristianrpo/auth-microservice/internal/application/services"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/config"
+	httpClient "github.com/kristianrpo/auth-microservice/internal/infrastructure/http"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/postgres"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/rabbitmq"
 	"github.com/kristianrpo/auth-microservice/internal/infrastructure/redis"
@@ -202,6 +203,12 @@ func main() {
 		_ = rbPublisher.Close()
 	}()
 
+	// Initialize External Connectivity Client
+	externalConnectivityClient := httpClient.NewExternalConnectivityClient(
+		cfg.ExternalConnectivity.BaseURL,
+		logger,
+	)
+
 	// Inicializar servicios
 	jwtService := services.NewJWTService(
 		cfg.JWT.Secret,
@@ -210,7 +217,15 @@ func main() {
 		logger,
 	)
 
-	authService := services.NewAuthService(userRepo, tokenRepo, jwtService, rbPublisher, cfg.RabbitMQ.UserRegisteredQueue, logger)
+	authService := services.NewAuthService(
+		userRepo,
+		tokenRepo,
+		jwtService,
+		rbPublisher,
+		externalConnectivityClient,
+		cfg.RabbitMQ.UserRegisteredQueue,
+		logger,
+	)
 
 	oauth2Service := services.NewOAuth2Service(
 		oauthClientRepo,

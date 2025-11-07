@@ -381,6 +381,7 @@ jobs:
               --arg user_registered_queue "${{ secrets.RABBITMQ_USER_REGISTERED_QUEUE || 'auth.user.registered' }}" \
               --arg prefetch "${{ secrets.RABBITMQ_PREFETCH_COUNT || '1' }}" \
               --arg auto_ack "${{ secrets.RABBITMQ_AUTO_ACK || 'false' }}" \
+              --arg external_connectivity_url "${{ secrets.EXTERNAL_CONNECTIVITY_URL || 'http://external-connectivity-service.external-connectivity.svc.cluster.local:8080' }}" \
               --arg jwt_secret "${{ secrets.JWT_SECRET }}" \
               --arg jwt_access_duration "${{ secrets.JWT_ACCESS_TOKEN_DURATION || '15m' }}" \
               --arg jwt_refresh_duration "${{ secrets.JWT_REFRESH_TOKEN_DURATION || '168h' }}" \
@@ -404,6 +405,7 @@ jobs:
                 RABBITMQ_USER_REGISTERED_QUEUE: $user_registered_queue,
                 RABBITMQ_PREFETCH_COUNT: $prefetch,
                 RABBITMQ_AUTO_ACK: $auto_ack,
+                EXTERNAL_CONNECTIVITY_URL: $external_connectivity_url,
                 JWT_SECRET: $jwt_secret,
                 JWT_ACCESS_TOKEN_DURATION: $jwt_access_duration,
                 JWT_REFRESH_TOKEN_DURATION: $jwt_refresh_duration,
