@@ -121,6 +121,26 @@ func (m *MockTokenRepository) DeleteUserTokens(ctx context.Context, idCitizen in
 	return nil
 }
 
+// MockMessagePublisher is a mock implementation of ports.MessagePublisher
+type MockMessagePublisher struct {
+	PublishFunc func(ctx context.Context, queueName string, message []byte) error
+	CloseFunc   func() error
+}
+
+func (m *MockMessagePublisher) Publish(ctx context.Context, queueName string, message []byte) error {
+	if m.PublishFunc != nil {
+		return m.PublishFunc(ctx, queueName, message)
+	}
+	return nil
+}
+
+func (m *MockMessagePublisher) Close() error {
+	if m.CloseFunc != nil {
+		return m.CloseFunc()
+	}
+	return nil
+}
+
 // MockOAuthClientRepository is a mock implementation of ports.OAuthClientRepository
 type MockOAuthClientRepository struct {
 	CreateFunc        func(ctx context.Context, client *domain.OAuthClient) error

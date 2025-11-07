@@ -57,6 +57,9 @@ type RabbitMQConfig struct {
 	// Consumer queue configuration
 	ConsumerQueue string
 
+	// Publisher queue configuration
+	UserRegisteredQueue string
+
 	// Queue settings
 	Durable       bool
 	PrefetchCount int
@@ -99,11 +102,12 @@ func Load() (*Config, error) {
 			RefreshTokenDuration: getEnvAsDuration("JWT_REFRESH_TOKEN_DURATION", 7*24*time.Hour),
 		},
 		RabbitMQ: RabbitMQConfig{
-			URL:           getEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
-			ConsumerQueue: getEnv("RABBITMQ_CONSUMER_QUEUE", "auth_user_transferred"),
-			Durable:       true,
-			PrefetchCount: getEnvAsInt("RABBITMQ_PREFETCH_COUNT", 1),
-			AutoAck:       getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
+			URL:                 getEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/"),
+			ConsumerQueue:       getEnv("RABBITMQ_CONSUMER_QUEUE", "auth_user_transferred"),
+			UserRegisteredQueue: getEnv("RABBITMQ_USER_REGISTERED_QUEUE", "auth.user.registered"),
+			Durable:             true,
+			PrefetchCount:       getEnvAsInt("RABBITMQ_PREFETCH_COUNT", 1),
+			AutoAck:             getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
 		},
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),

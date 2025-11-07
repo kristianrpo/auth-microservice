@@ -10,6 +10,7 @@ import (
 
 	"github.com/kristianrpo/auth-microservice/internal/application/ports"
 	domainerrors "github.com/kristianrpo/auth-microservice/internal/domain/errors"
+	"github.com/kristianrpo/auth-microservice/internal/domain/events"
 	domain "github.com/kristianrpo/auth-microservice/internal/domain/models"
 	"github.com/kristianrpo/auth-microservice/internal/observability/metrics"
 )
@@ -28,10 +29,12 @@ type AuthServiceInterface interface {
 
 // AuthService handles the business logic of authentication
 type AuthService struct {
-	userRepo   ports.UserRepository
-	tokenRepo  ports.TokenRepository
-	jwtService *JWTService
-	logger     *zap.Logger
+	userRepo            ports.UserRepository
+	tokenRepo           ports.TokenRepository
+	jwtService          *JWTService
+	publisher           ports.MessagePublisher
+	userRegisteredQueue string
+	logger              *zap.Logger
 }
 
 // NewAuthService creates a new instance of AuthService
@@ -39,13 +42,17 @@ func NewAuthService(
 	userRepo ports.UserRepository,
 	tokenRepo ports.TokenRepository,
 	jwtService *JWTService,
+	publisher ports.MessagePublisher,
+	userRegisteredQueue string,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		userRepo:   userRepo,
-		tokenRepo:  tokenRepo,
-		jwtService: jwtService,
-		logger:     logger,
+		userRepo:            userRepo,
+		tokenRepo:           tokenRepo,
+		jwtService:          jwtService,
+		publisher:           publisher,
+		userRegisteredQueue: userRegisteredQueue,
+		logger:              logger,
 	}
 }
 
@@ -93,6 +100,21 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 
 		s.logger.Error("failed to save user", zap.Error(err))
 		return nil, domainerrors.ErrInternal
+	}
+
+	// Publish user registered event to RabbitMQ
+	event := events.NewUserRegisteredEvent(user.IDCitizen, user.Name, user.Email)
+	eventData, err := event.ToJSON()
+	if err != nil {
+		s.logger.Error("failed to serialize user registered event", zap.Error(err))
+		// Don't fail the registration if event publishing fails
+	} else {
+		if err := s.publisher.Publish(ctx, s.userRegisteredQueue, eventData); err != nil {
+			s.logger.Error("failed to publish user registered event", zap.Error(err))
+			// Don't fail the registration if event publishing fails
+		} else {
+			s.logger.Info("user registered event published", zap.String("message_id", event.MessageID), zap.Int("id_citizen", idCitizen), zap.String("queue", s.userRegisteredQueue))
+		}
 	}
 
 	s.logger.Info("user registered successfully", zap.String("user_id", user.ID), zap.String("email", email), zap.Int("id_citizen", idCitizen))

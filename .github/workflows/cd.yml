@@ -378,6 +378,7 @@ jobs:
               --arg port "8080" \
               --arg rabbit "$RABBIT_URL" \
               --arg consumer_queue "${{ secrets.RABBITMQ_CONSUMER_QUEUE }}" \
+              --arg user_registered_queue "${{ secrets.RABBITMQ_USER_REGISTERED_QUEUE || 'auth.user.registered' }}" \
               --arg prefetch "${{ secrets.RABBITMQ_PREFETCH_COUNT || '1' }}" \
               --arg auto_ack "${{ secrets.RABBITMQ_AUTO_ACK || 'false' }}" \
               --arg jwt_secret "${{ secrets.JWT_SECRET }}" \
@@ -400,6 +401,7 @@ jobs:
                 SERVER_PORT: $port,
                 RABBITMQ_URL: $rabbit,
                 RABBITMQ_CONSUMER_QUEUE: $consumer_queue,
+                RABBITMQ_USER_REGISTERED_QUEUE: $user_registered_queue,
                 RABBITMQ_PREFETCH_COUNT: $prefetch,
                 RABBITMQ_AUTO_ACK: $auto_ack,
                 JWT_SECRET: $jwt_secret,

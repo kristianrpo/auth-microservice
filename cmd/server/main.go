@@ -183,23 +183,6 @@ func main() {
 	tokenRepo := redis.NewTokenRepository(redisClient, logger)
 	oauthClientRepo := postgres.NewOAuthClientRepository(db, logger)
 
-	// Inicializar servicios
-	jwtService := services.NewJWTService(
-		cfg.JWT.Secret,
-		cfg.JWT.AccessTokenDuration,
-		cfg.JWT.RefreshTokenDuration,
-		logger,
-	)
-
-	authService := services.NewAuthService(userRepo, tokenRepo, jwtService, logger)
-
-	oauth2Service := services.NewOAuth2Service(
-		oauthClientRepo,
-		cfg.JWT.Secret,
-		cfg.JWT.AccessTokenDuration,
-		logger,
-	)
-
 	// Initialize RabbitMQ
 	rbClient, consumeCancel, err := setupRabbitMQ(cfg, userRepo, tokenRepo, logger)
 	if err != nil {
@@ -209,6 +192,32 @@ func main() {
 		consumeCancel()
 		_ = rbClient.Close()
 	}()
+
+	// Initialize RabbitMQ Publisher
+	rbPublisher, err := rabbitmq.NewRabbitMQPublisher(rbClient)
+	if err != nil {
+		logger.Fatal("Failed to create RabbitMQ publisher", zap.Error(err))
+	}
+	defer func() {
+		_ = rbPublisher.Close()
+	}()
+
+	// Inicializar servicios
+	jwtService := services.NewJWTService(
+		cfg.JWT.Secret,
+		cfg.JWT.AccessTokenDuration,
+		cfg.JWT.RefreshTokenDuration,
+		logger,
+	)
+
+	authService := services.NewAuthService(userRepo, tokenRepo, jwtService, rbPublisher, cfg.RabbitMQ.UserRegisteredQueue, logger)
+
+	oauth2Service := services.NewOAuth2Service(
+		oauthClientRepo,
+		cfg.JWT.Secret,
+		cfg.JWT.AccessTokenDuration,
+		logger,
+	)
 
 	// Inicializar router
 	router := httpAdapter.NewRouter(authService, oauth2Service, db, redisClient, logger)
