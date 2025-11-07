@@ -126,48 +126,16 @@ jobs:
             fi
           done
 
-      # ========== 6. LIMPIAR ESTADO DE RECURSOS PROBLEMÁTICOS ==========
-      - name: Clean up problematic Terraform state
-        working-directory: infra/terraform/aws
-        continue-on-error: true
-        run: |
-          echo "=== Limpiando estado de Terraform con recursos problemáticos ==="
-          
-          RESOURCES=(
-            "module.irsa.aws_iam_role.this[0]"
-            "module.irsa.aws_iam_role_policy_attachment.this[\"service\"]"
-            "aws_iam_role_policy_attachment.eso_attach"
-            "aws_iam_policy.service"
-            "aws_iam_policy.external_secrets"
-            "aws_secretsmanager_secret.app"
-            "aws_secretsmanager_secret.rds_credentials"
-            "aws_secretsmanager_secret.redis_auth"
-            "aws_secretsmanager_secret.app_connections"
-            "aws_db_instance.postgres"
-            "aws_elasticache_cluster.redis"
-            "aws_security_group.rds"
-            "aws_security_group.redis"
-            "aws_db_parameter_group.rds"
-            "aws_db_subnet_group.rds"
-          )
-          
-          for resource in "${RESOURCES[@]}"; do
-            echo "Verificando: $resource"
-            terraform state rm "$resource" 2>&1 | grep -v "No matching instance found" || true
-          done
-          
-          echo "✓ Estado limpiado"
-
-      # ========== 7. TERRAFORM DESTROY INFRA ==========
+      # ========== 6. TERRAFORM DESTROY INFRA ==========
       - name: Terraform Destroy microservice resources
         working-directory: infra/terraform/aws
-        continue-on-error: true
         run: |
-          echo "=== Destruyendo recursos AWS restantes ==="
+          set -euo pipefail
+          echo "=== Destruyendo recursos AWS del microservicio ==="
           terraform destroy -auto-approve -input=false \
-            -var "tf_backend_bucket=$TF_BACKEND_BUCKET" 2>&1 || echo "Destroy falló (esperado si hay recursos en conflicto)"
+            -var "tf_backend_bucket=$TF_BACKEND_BUCKET"
 
-      # ========== 8. ELIMINAR RECURSOS DEL API GATEWAY ==========
+      # ========== 7. ELIMINAR RECURSOS DEL API GATEWAY ==========
       - name: Clean up API Gateway routes and integrations
         run: |
           echo "=== Limpiando recursos de API Gateway ==="
@@ -202,7 +170,7 @@ jobs:
             echo "No se pudo obtener API Gateway ID, saltando limpieza de API Gateway"
           fi
 
-      # ========== 9. LIMPIAR RECURSOS RESIDUALES (ALB, IAM, etc) ==========
+      # ========== 8. LIMPIAR RECURSOS RESIDUALES (ALB, IAM, etc) ==========
       - name: Clean up residual AWS resources
         run: |
           echo "=== Limpiando recursos AWS residuales ==="
@@ -231,10 +199,25 @@ jobs:
             aws iam delete-role --role-name "$IAM_ROLE" || true
           fi
           
-          IAM_POLICY_ARN=$(aws iam list-policies --query 'Policies[?contains(PolicyName, `auth`)].Arn' --output text 2>/dev/null || echo "")
-          if [ -n "$IAM_POLICY_ARN" ] && [ "$IAM_POLICY_ARN" != "None" ]; then
-            echo "Eliminando IAM Policy: $IAM_POLICY_ARN"
-            aws iam delete-policy --policy-arn "$IAM_POLICY_ARN" || true
+          IAM_POLICY_ARNS=$(aws iam list-policies --query 'Policies[?contains(PolicyName, `auth`)].Arn' --output text 2>/dev/null || echo "")
+          if [ -n "$IAM_POLICY_ARNS" ] && [ "$IAM_POLICY_ARNS" != "None" ]; then
+            for policy_arn in $IAM_POLICY_ARNS; do
+              if [ -n "$policy_arn" ]; then
+                echo "Procesando IAM Policy: $policy_arn"
+                ATTACHED_ROLES=$(aws iam list-entities-for-policy --policy-arn "$policy_arn" \
+                  --query 'PolicyRoles[].RoleName' --output text 2>/dev/null || echo "")
+                if [ -n "$ATTACHED_ROLES" ] && [ "$ATTACHED_ROLES" != "None" ]; then
+                  for role_name in $ATTACHED_ROLES; do
+                    if [ -n "$role_name" ]; then
+                      echo "Desadjuntando política $policy_arn de rol $role_name"
+                      aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn" || true
+                    fi
+                  done
+                fi
+                echo "Eliminando IAM Policy: $policy_arn"
+                aws iam delete-policy --policy-arn "$policy_arn" || true
+              fi
+            done
           fi
           
           aws secretsmanager list-secrets --region ${{ secrets.AWS_REGION }} --include-planned-deletion \
@@ -285,21 +268,7 @@ jobs:
           
           echo "✓ Recursos residuales eliminados"
 
-      # ========== 10. LIMPIAR ESTADO DE TERRAFORM COMPLETAMENTE ==========
-      - name: Clean Terraform state completely
-        working-directory: infra/terraform/aws
-        continue-on-error: true
-        run: |
-          echo "=== Limpiando TODO el estado de Terraform ==="
-          terraform state list 2>/dev/null | while read resource; do
-            if [ -n "$resource" ]; then
-              echo "Eliminando del estado: $resource"
-              terraform state rm "$resource" 2>&1 || true
-            fi
-          done
-          echo "✓ Estado de Terraform completamente limpiado"
-
-      # ========== 11. OPCIONAL: ELIMINAR STATE FILES ==========
+      # ========== 9. OPCIONAL: ELIMINAR STATE FILES ==========
       - name: Delete state files (optional)
         if: ${{ github.event.inputs.delete_state == 'true' }}
         run: |
