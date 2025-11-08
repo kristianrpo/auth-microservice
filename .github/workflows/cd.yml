@@ -381,7 +381,7 @@ jobs:
               --arg user_registered_queue "${{ secrets.RABBITMQ_USER_REGISTERED_QUEUE || 'auth.user.registered' }}" \
               --arg prefetch "${{ secrets.RABBITMQ_PREFETCH_COUNT || '1' }}" \
               --arg auto_ack "${{ secrets.RABBITMQ_AUTO_ACK || 'false' }}" \
-              --arg external_connectivity_url "${{ secrets.EXTERNAL_CONNECTIVITY_URL || 'http://external-connectivity-service.external-connectivity.svc.cluster.local:8080' }}" \
+              --arg external_connectivity_url "${{ secrets.EXTERNAL_CONNECTIVITY_URL || 'http://connectivity-service.connectivity.svc.cluster.local:80' }}" \
               --arg jwt_secret "${{ secrets.JWT_SECRET }}" \
               --arg jwt_access_duration "${{ secrets.JWT_ACCESS_TOKEN_DURATION || '15m' }}" \
               --arg jwt_refresh_duration "${{ secrets.JWT_REFRESH_TOKEN_DURATION || '168h' }}" \

@@ -116,7 +116,7 @@ func Load() (*Config, error) {
 			AutoAck:             getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
 		},
 		ExternalConnectivity: ExternalConnectivityConfig{
-			BaseURL: getEnv("EXTERNAL_CONNECTIVITY_URL", "http://external-connectivity-service.external-connectivity.svc.cluster.local:8080"),
+			BaseURL: getEnv("EXTERNAL_CONNECTIVITY_URL", "http://connectivity-service.connectivity.svc.cluster.local:80"),
 		},
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),
