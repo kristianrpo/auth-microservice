@@ -206,6 +206,9 @@ func main() {
 	// Initialize External Connectivity Client
 	externalConnectivityClient := httpClient.NewExternalConnectivityClient(
 		cfg.ExternalConnectivity.BaseURL,
+		cfg.ExternalConnectivity.AuthURL,
+		cfg.ExternalConnectivity.ClientID,
+		cfg.ExternalConnectivity.ClientSecret,
 		logger,
 	)
 

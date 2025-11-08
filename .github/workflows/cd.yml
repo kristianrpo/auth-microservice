@@ -382,6 +382,9 @@ jobs:
               --arg prefetch "${{ secrets.RABBITMQ_PREFETCH_COUNT || '1' }}" \
               --arg auto_ack "${{ secrets.RABBITMQ_AUTO_ACK || 'false' }}" \
               --arg external_connectivity_url "${{ secrets.EXTERNAL_CONNECTIVITY_URL || 'http://connectivity-service.connectivity.svc.cluster.local:80' }}" \
+              --arg external_connectivity_auth_url "${{ secrets.EXTERNAL_CONNECTIVITY_AUTH_URL || 'http://auth-service.auth.svc.cluster.local:8080/api/auth/oauth2/token' }}" \
+              --arg external_connectivity_client_id "${{ secrets.EXTERNAL_CONNECTIVITY_CLIENT_ID }}" \
+              --arg external_connectivity_client_secret "${{ secrets.EXTERNAL_CONNECTIVITY_CLIENT_SECRET }}" \
               --arg jwt_secret "${{ secrets.JWT_SECRET }}" \
               --arg jwt_access_duration "${{ secrets.JWT_ACCESS_TOKEN_DURATION || '15m' }}" \
               --arg jwt_refresh_duration "${{ secrets.JWT_REFRESH_TOKEN_DURATION || '168h' }}" \
@@ -406,6 +409,9 @@ jobs:
                 RABBITMQ_PREFETCH_COUNT: $prefetch,
                 RABBITMQ_AUTO_ACK: $auto_ack,
                 EXTERNAL_CONNECTIVITY_URL: $external_connectivity_url,
+                EXTERNAL_CONNECTIVITY_AUTH_URL: $external_connectivity_auth_url,
+                EXTERNAL_CONNECTIVITY_CLIENT_ID: $external_connectivity_client_id,
+                EXTERNAL_CONNECTIVITY_CLIENT_SECRET: $external_connectivity_client_secret,
                 JWT_SECRET: $jwt_secret,
                 JWT_ACCESS_TOKEN_DURATION: $jwt_access_duration,
                 JWT_REFRESH_TOKEN_DURATION: $jwt_refresh_duration,

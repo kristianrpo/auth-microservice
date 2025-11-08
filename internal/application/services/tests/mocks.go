@@ -154,6 +154,10 @@ func (m *MockExternalConnectivityClient) CheckCitizenExists(ctx context.Context,
 	return false, nil
 }
 
+func NewMockExternalConnectivityClient() *MockExternalConnectivityClient {
+	return &MockExternalConnectivityClient{}
+}
+
 // MockOAuthClientRepository is a mock implementation of ports.OAuthClientRepository
 type MockOAuthClientRepository struct {
 	CreateFunc        func(ctx context.Context, client *domain.OAuthClient) error

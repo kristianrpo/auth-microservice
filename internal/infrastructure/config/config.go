@@ -69,7 +69,10 @@ type RabbitMQConfig struct {
 
 // ExternalConnectivityConfig contains the external-connectivity microservice configuration
 type ExternalConnectivityConfig struct {
-	BaseURL string
+	BaseURL      string
+	AuthURL      string
+	ClientID     string
+	ClientSecret string
 }
 
 // AppConfig contains the general application configuration
@@ -116,7 +119,10 @@ func Load() (*Config, error) {
 			AutoAck:             getEnv("RABBITMQ_AUTO_ACK", "false") == "true",
 		},
 		ExternalConnectivity: ExternalConnectivityConfig{
-			BaseURL: getEnv("EXTERNAL_CONNECTIVITY_URL", "http://connectivity-service.connectivity.svc.cluster.local:80"),
+			BaseURL:      getEnv("EXTERNAL_CONNECTIVITY_URL", "http://connectivity-service.connectivity.svc.cluster.local:80"),
+			AuthURL:      getEnv("EXTERNAL_CONNECTIVITY_AUTH_URL", "http://auth-service.auth.svc.cluster.local:8080/api/auth/oauth2/token"),
+			ClientID:     getEnv("EXTERNAL_CONNECTIVITY_CLIENT_ID", ""),
+			ClientSecret: getEnv("EXTERNAL_CONNECTIVITY_CLIENT_SECRET", ""),
 		},
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),
