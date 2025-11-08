@@ -120,7 +120,7 @@ func Load() (*Config, error) {
 		},
 		ExternalConnectivity: ExternalConnectivityConfig{
 			BaseURL:      getEnv("EXTERNAL_CONNECTIVITY_URL", "http://connectivity-service.connectivity.svc.cluster.local:80"),
-			AuthURL:      getEnv("EXTERNAL_CONNECTIVITY_AUTH_URL", "http://auth-service.auth.svc.cluster.local:8080/api/auth/oauth2/token"),
+			AuthURL:      getEnv("EXTERNAL_CONNECTIVITY_AUTH_URL", "http://auth-service.auth.svc.cluster.local:80/api/auth/token"),
 			ClientID:     getEnv("EXTERNAL_CONNECTIVITY_CLIENT_ID", ""),
 			ClientSecret: getEnv("EXTERNAL_CONNECTIVITY_CLIENT_SECRET", ""),
 		},

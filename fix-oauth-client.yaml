@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fix-oauth-client
+  namespace: auth
+spec:
+  template:
+    spec:
+      containers:
+      - name: psql
+        image: python:3.11-alpine
+        env:
+        - name: PGHOST
+          value: "auth-dev-pg.ck94qmk8ufd3.us-east-1.rds.amazonaws.com"
+        - name: PGPORT
+          value: "5432"
+        - name: PGDATABASE
+          value: "appdb"
+        - name: PGUSER
+          value: "appuser"
+        - name: PGPASSWORD
+          value: "O1L6h>e1FT9LQr2e}aqq"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Instalar dependencias
+          apk add --no-cache postgresql-client
+          pip install bcrypt
+          
+          # Generar hash para "connectivity2024"
+          HASH=$(python -c "import bcrypt; print(bcrypt.hashpw(b'connectivity2024', bcrypt.gensalt()).decode())")
+          echo "Generated hash: $HASH"
+          
+          # Actualizar en la base de datos
+          psql << EOF
+          UPDATE oauth_clients 
+          SET client_secret = '$HASH', updated_at = NOW()
+          WHERE client_id = 'auth-to-connectivity-client';
+          
+          SELECT client_id, name, active, 
+                 substring(client_secret, 1, 30) as secret_preview
+          FROM oauth_clients 
+          WHERE client_id = 'auth-to-connectivity-client';
+          EOF
+      restartPolicy: Never
+  backoffLimit: 3
